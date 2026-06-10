@@ -102,12 +102,29 @@
         var id = entry[0], series = entry[1], title = entry[2], desc = entry[3], thumb = entry[4];
         var card = document.createElement("article");
         card.className = "figure-card";
-        var baseName = thumb.replace(/^.*\//, "").replace(/\.svg$/, "");
+        // The thumb field can be either an SVG or a PNG path. If it already
+        // has an extension, use it as-is; otherwise derive the PNG thumb
+        // (replacing the .svg with .png) and the SVG link from the base name.
+        var baseName;
+        var thumbExt;
+        if (/\.svg$/i.test(thumb)) {
+          baseName = thumb.replace(/^.*\//, "").replace(/\.svg$/i, "");
+          thumbExt = ".png";
+        } else {
+          baseName = thumb.replace(/^.*\//, "").replace(/\.\w+$/, "");
+          thumbExt = thumb.replace(/^[^.]*\.(\w+)$/, ".$1");
+        }
         var thumbImg = useThumbs
-          ? thumbPrefix + baseName + ".png"
+          ? (thumbPrefix + baseName + thumbExt).replace(/\.svg$/i, ".png")
           : (svgPrefix + baseName + ".svg");
-        // The link to the full SVG (for "view in catalog" / "open in new tab" behavior)
-        var fullLink = svgPrefix + baseName + ".svg";
+        // The link to the full file (for "view in catalog" / "open in new tab").
+        // For figures whose thumb points to a PNG, link to the PNG too.
+        var fullLink;
+        if (/\.svg$/i.test(thumb)) {
+          fullLink = svgPrefix + baseName + ".svg";
+        } else {
+          fullLink = thumbPrefix + baseName + thumbExt;
+        }
         card.innerHTML =
           '<a class="figure-thumb" href="' + fullLink + '" target="_blank" rel="noopener" title="Open ' + id + ' at full size">' +
           '<img src="' + thumbImg + '" alt="' + id + ' — ' + title + '" loading="lazy">' +
