@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About — DropCeiling</title>
+  <meta name="description" content="About the DropCeiling project, the data &amp; findings site, the license, and how to cite.">
+  <meta name="theme-color" content="#fafaf8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23fafaf8'/><circle cx='8' cy='8' r='3' fill='%23e8a23d'/></svg>">
+  <link rel="stylesheet" href="../styles/main.css?v=20260610">
+</head>
+<body>
+  <a class="skip-link" href="#start">Skip to content</a>
+
+  <header class="mobile-header">
+    <a href="../index.html" class="brand compact"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+    <button class="menu-button" type="button" aria-expanded="false">Menu</button>
+  </header>
+  <div class="backdrop"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <a href="../index.html" class="brand"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+      <p class="sidebar-summary">About the project, the license, and how to cite.</p>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="../index.html#start">← Back to the main site</a>
+        <a href="../index.html#story">Story</a>
+        <a href="../index.html#findings-g">Findings · G</a>
+        <a href="../index.html#findings-h">Findings · H</a>
+        <a href="../index.html#architecture">Architecture (digest)</a>
+        <a href="../architecture/index.html">Full architecture ref</a>
+        <a href="../figures/index.html">Figure catalog</a>
+        <a href="../data/index.html">Data</a>
+        <a href="../index.html#publications">Publications</a>
+        <a href="#start">About</a>
+      </nav>
+      <div class="sidebar-actions">
+        <a href="https://thedropceiling.com" class="external-link">Live installation</a>
+        <a href="https://github.com/npuckett/dc-dev" class="external-link">Source code</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <section id="start" class="content-section">
+      <span class="eyebrow">About</span>
+      <h1>About this <span class="light">site</span>.</h1>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Project</span>
+        <h2>The project.</h2>
+        <p>DropCeiling is an open-source adaptive augmented-reality installation: 12 LED panels in a Toronto storefront window, lit by a single virtual point light whose state responds to pedestrians tracked on the sidewalk outside. The system ran 24/7 for 54 days (Jan 29 – Mar 17, 2026), capturing roughly 23.3 million tracking events and changing measurably along the way.</p>
+        <p>The system is governed by three nested control loops at three timescales: <strong>reaction</strong> (modes and gestures follow who is present now, ~33 ms), <strong>anticipation</strong> (trend windows pre-position the light, seconds–hours), and <strong>self-tuning</strong> (a meta-review reshapes the twelve meta-parameters, hours–days). An interaction budget meters how fast the personality can change, keeping adaptation deliberate across the whole run.</p>
+        <p>It was developed with AI coding agents working against a shared 3D model of the site — the model didn't describe the installation, it became its brain.</p>
+      </div>
+
+      <div class="two-up">
+        <div class="panel">
+          <h3>Team</h3>
+          <p><strong>Nick Puckett</strong> — design, runtime, analysis.<br><strong>Joshua Pothen</strong> — design collaborator.</p>
+          <p>The full system was developed with AI coding agents working against a shared 3D model of the site.</p>
+        </div>
+        <div class="panel">
+          <h3>Where to look next</h3>
+          <ul>
+            <li><a href="https://thedropceiling.com" class="external-link">thedropceiling.com</a> — the live installation</li>
+            <li><a href="https://github.com/npuckett/Drop-Ceiling" class="external-link">Drop-Ceiling (project home)</a> — the hardware, system, and showcase</li>
+            <li><a href="https://github.com/npuckett/dc-dev" class="external-link">dc-dev (source code)</a> — the runtime, the database, the analysis scripts</li>
+            <li><a href="https://github.com/npuckett/DropCeiling" class="external-link">DropCeiling (Arduino lib)</a> — the 8-channel 0-10V controller</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">License</span>
+        <h2>License.</h2>
+        <p>This site is MIT-licensed. The data is yours to use; the figures are yours to cite.</p>
+        <p>For the deployment JSONs, you can <code>fetch</code> them from any same-origin page on this site. For the full 479 MB merged SQLite database, see the <a href="https://github.com/npuckett/dc-dev" class="external-link">source repo</a>.</p>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Colophon</span>
+        <h2>How this site was built.</h2>
+        <p>One HTML page with all sections as anchors. One CSS file, ~300 lines, paper background + 1px borders + 8px radius + system fonts, with a warm-accent palette for the light. Four small vanilla-JS scripts, no dependencies, no build step. The narrative markdown is converted to HTML at build time with <code>markdown-it-py</code>; the static JSONs the site fetches are regenerated from the merged SQLite with <code>IO/analysis/export_web_json.py</code>.</p>
+        <p>The home page is patterned after the <a href="https://npuckett.github.io/p5-phone/examples/homepage/" class="external-link">p5-phone docs</a> — same fixed-sidebar + slide-in-drawer pattern, same eyebrow→h2→lede section rhythm, same one-CSS-file discipline. The DropCeiling palette adapts p5-phone's paper + green-accent into paper + warm-accent, the warm reserved for the light (and for the most important annotations).</p>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <p>DropCeiling — Data &amp; Findings &nbsp;·&nbsp; <a href="../../LICENSE">MIT license</a></p>
+      <p>Source on <a href="https://github.com/npuckett/DropCeiling-Data" class="external-link">GitHub</a></p>
+    </footer>
+  </main>
+
+  <script src="../scripts/nav.js?v=20260610"></script>
+</body>
+</html>

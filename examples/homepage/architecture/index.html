@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture — DropCeiling</title>
+  <meta name="description" content="The full 18-section reference for the DropCeiling adaptive-AR installation: meta-parameters, the three nested control loops, the interaction budget, the output funnel, and the database.">
+  <meta name="theme-color" content="#fafaf8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23fafaf8'/><circle cx='8' cy='8' r='3' fill='%23e8a23d'/></svg>">
+  <link rel="stylesheet" href="../styles/main.css?v=20260610">
+</head>
+<body>
+  <a class="skip-link" href="#start">Skip to content</a>
+
+  <header class="mobile-header">
+    <a href="../index.html" class="brand compact"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+    <button class="menu-button" type="button" aria-expanded="false">Menu</button>
+  </header>
+  <div class="backdrop"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <a href="../index.html" class="brand"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+      <p class="sidebar-summary">The full 18-section reference — the whole system, from cameras to DMX, end to end.</p>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="../index.html#start">← Back to the main site</a>
+        <a href="../index.html#story">Story</a>
+        <a href="../index.html#findings-g">Findings · G</a>
+        <a href="../index.html#findings-h">Findings · H</a>
+        <a href="../index.html#architecture">Architecture (digest)</a>
+        <a href="../figures/index.html">Figure catalog</a>
+        <a href="../data/index.html">Data</a>
+        <a href="../index.html#publications">Publications</a>
+        <a href="../about/index.html">About</a>
+      </nav>
+      <div class="sidebar-actions">
+        <a href="https://thedropceiling.com" class="external-link">Live installation</a>
+        <a href="https://github.com/npuckett/dc-dev" class="external-link">Source code</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <section id="start" class="content-section hero-section">
+      <span class="eyebrow">Architecture</span>
+      <h1>The whole system, in <span class="light">eighteen sections</span>.</h1>
+      <p class="hero-copy">The master reference. Every system decision documented, every constant cited, every diagram described. Read it as a tour, or as a lookup.</p>
+      <p style="color:var(--muted); margin-top:16px;"><a href="../index.html#architecture">← Back to the architecture digest on the main site</a></p>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Full reference</span>
+        <h2>All 18 sections.</h2>
+        <p>The full prose of the 18-section diagram guide, with all 58 referenced figures (A0–A11, A7.1–A7.7, B1–B3, C1–C5, D1–D2, E1/E3/E4, F1–F3, G1–G10, H1–H10) linked and embedded.</p>
+      </div>
+      <div id="architecture-content">
+        <p style="color:var(--muted);">Loading the full reference…</p>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <p>DropCeiling — Data &amp; Findings &nbsp;·&nbsp; <a href="../../LICENSE">MIT license</a></p>
+      <p>Source on <a href="https://github.com/npuckett/DropCeiling-Data" class="external-link">GitHub</a></p>
+    </footer>
+  </main>
+
+  <script src="../scripts/nav.js?v=20260610"></script>
+  <script>
+  (function () {
+    fetch("../_rendered/diagram-guide.html").then(function (r) { return r.text(); }).then(function (html) {
+      var el = document.getElementById("architecture-content");
+      if (el) el.innerHTML = html;
+    }).catch(function (e) { console.error("Failed to load diagram-guide.html", e); });
+  })();
+  </script>
+</body>
+</html>

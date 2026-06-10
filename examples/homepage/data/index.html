@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data — DropCeiling</title>
+  <meta name="description" content="The DropCeiling run data: source databases, the merge, the Feb 3-9 gap recovery, the calibration artifact, the web deployment plan, and download links for the JSON aggregates.">
+  <meta name="theme-color" content="#fafaf8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23fafaf8'/><circle cx='8' cy='8' r='3' fill='%23e8a23d'/></svg>">
+  <link rel="stylesheet" href="../styles/main.css?v=20260610">
+</head>
+<body>
+  <a class="skip-link" href="#start">Skip to content</a>
+
+  <header class="mobile-header">
+    <a href="../index.html" class="brand compact"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+    <button class="menu-button" type="button" aria-expanded="false">Menu</button>
+  </header>
+  <div class="backdrop"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <a href="../index.html" class="brand"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+      <p class="sidebar-summary">Run-data deep-dive: source databases, the merge, the calibration artifact, the recovered week, and the web deployment architecture.</p>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="../index.html#start">← Back to the main site</a>
+        <a href="../index.html#story">Story</a>
+        <a href="../index.html#findings-g">Findings · G</a>
+        <a href="../index.html#findings-h">Findings · H</a>
+        <a href="../index.html#architecture">Architecture (digest)</a>
+        <a href="../architecture/index.html">Full architecture ref</a>
+        <a href="../figures/index.html">Figure catalog</a>
+        <a href="../index.html#data">Data (summary)</a>
+        <a href="../index.html#publications">Publications</a>
+        <a href="../about/index.html">About</a>
+      </nav>
+      <div class="sidebar-actions">
+        <a href="https://thedropceiling.com" class="external-link">Live installation</a>
+        <a href="https://github.com/npuckett/dc-dev" class="external-link">Source code</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <section id="start" class="content-section">
+      <span class="eyebrow">Data</span>
+      <h1>The 48-day run, <span class="light">end to end</span>.</h1>
+      <p>Two complementary documents. The first is the data provenance — where the run data came from, what got merged, where the gaps were and how they were recovered. The second is the deployment plan — how the data was packaged for the web (the same JSONs this site fetches), and how a more interactive engine could be built on top.</p>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Provenance</span>
+        <h2>Data timeline &amp; merge.</h2>
+        <p>Two source SQLite databases, complementary rather than duplicate, merged into a single read-only analysis copy. The merge step also recovers a 7-day gap (Feb 3–9) from the daily-report archive.</p>
+      </div>
+      <div id="data-timeline-content">
+        <p style="color:var(--muted);">Loading…</p>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Deployment</span>
+        <h2>Run data online — the three-tier plan.</h2>
+        <p>How the data is packaged for the web. The static JSONs the site fetches. The architecture for a future interactive engine.</p>
+      </div>
+      <div id="web-deployment-content">
+        <p style="color:var(--muted);">Loading…</p>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Download</span>
+        <h2>The JSON aggregates.</h2>
+      </div>
+      <div class="btn-row">
+        <a class="primary-link" href="https://raw.githubusercontent.com/npuckett/DropCeiling-Data/main/web_data/hourly.json" target="_blank" rel="noopener">hourly.json &nbsp;·&nbsp; 234 KB &nbsp;·&nbsp; 1,063 rows</a>
+        <a class="primary-link" href="https://raw.githubusercontent.com/npuckett/DropCeiling-Data/main/web_data/daily.json" target="_blank" rel="noopener">daily.json &nbsp;·&nbsp; 13 KB &nbsp;·&nbsp; 48 rows</a>
+        <a class="primary-link" href="https://raw.githubusercontent.com/npuckett/DropCeiling-Data/main/web_data/meta.json" target="_blank" rel="noopener">meta.json &nbsp;·&nbsp; 1.5 KB</a>
+      </div>
+      <p style="font-size:0.9rem; color:var(--muted); margin-top:14px;">Or browse the <a href="https://github.com/npuckett/DropCeiling-Data/tree/main/web_data" class="external-link">web_data folder on GitHub</a>. The full 479 MB merged SQLite database stays off the network; for that, see the <a href="https://github.com/npuckett/dc-dev" class="external-link">source repo</a>.</p>
+    </section>
+
+    <footer class="site-footer">
+      <p>DropCeiling — Data &amp; Findings &nbsp;·&nbsp; <a href="../../LICENSE">MIT license</a></p>
+      <p>Source on <a href="https://github.com/npuckett/DropCeiling-Data" class="external-link">GitHub</a></p>
+    </footer>
+  </main>
+
+  <script src="../scripts/nav.js?v=20260610"></script>
+  <script>
+  (function () {
+    fetch("../_rendered/data-timeline.html").then(function (r) { return r.text(); }).then(function (html) {
+      var el = document.getElementById("data-timeline-content");
+      if (el) el.innerHTML = html;
+    }).catch(function (e) { console.error("Failed to load data-timeline.html", e); });
+    fetch("../_rendered/web-deployment-plan.html").then(function (r) { return r.text(); }).then(function (html) {
+      var el = document.getElementById("web-deployment-content");
+      if (el) el.innerHTML = html;
+    }).catch(function (e) { console.error("Failed to load web-deployment-plan.html", e); });
+  })();
+  </script>
+</body>
+</html>

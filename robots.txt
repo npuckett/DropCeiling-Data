@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://npuckett.github.io/DropCeiling-Data/sitemap.xml

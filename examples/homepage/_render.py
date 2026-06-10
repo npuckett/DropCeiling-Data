@@ -124,7 +124,7 @@ def rewrite_li_with_figure(li_html):
     return li_html + embed
 
 def add_heading_ids(html):
-    """Add id="..." to every <h1>/<h2>/h3>/<h4> based on its text content."""
+    """Add id="..." to every <h1>/<h2>/h3>/h4> based on its text content."""
     def repl(m):
         tag = m.group(1)
         attrs = m.group(2) or ""
@@ -136,6 +136,38 @@ def add_heading_ids(html):
             return m.group(0)
         return "<" + tag + attrs + ' id="' + hid + '">' + inner + "</" + tag + ">"
     return re.sub(r"<(h[1-4])([^>]*)>(.*?)</\1>", repl, html, flags=re.DOTALL)
+
+def rewrite_legacy_paths(html):
+    """Rewrite old dc-dev paths to the new homepage-relative paths.
+    - diagrams/assets/P*  -> ../assets/photos/P*
+    - diagrams/png/A*     -> ../assets/diagrams/A* (then strip the .png/.jpg/.jpeg -> .svg if available)
+    - diagrams/*.svg      -> ../assets/diagrams/*.svg
+    For png -> svg, look for the SVG equivalent.
+    """
+    def png_to_svg(p):
+        # If the path looks like .../diagrams/png/A0_master_overview.png,
+        # try to find A0_master_overview.svg in assets/diagrams/
+        m = re.search(r"diagrams/png/([A-Za-z0-9_\.\-]+)\.png$", p)
+        if not m: return p
+        stem = m.group(1)
+        svg_path = os.path.join(HERE, "assets", "diagrams", stem + ".svg")
+        if os.path.exists(svg_path):
+            return "../assets/diagrams/" + stem + ".svg"
+        return p
+
+    # diagrams/assets/P*.{jpg,png} -> ../assets/photos/P*.{jpg,png}
+    html = re.sub(r'(?:src|href)="diagrams/assets/([^"]+)"',
+                  lambda m: m.group(0).replace("diagrams/assets/", "../assets/photos/"),
+                  html)
+    # diagrams/png/A*.png -> ../assets/diagrams/A*.svg (if svg exists)
+    html = re.sub(r'(?:src|href)="diagrams/png/([^"]+)"',
+                  lambda m: '"' + png_to_svg(m.group(0).strip('"')) + '"',
+                  html)
+    # diagrams/*.svg -> ../assets/diagrams/*.svg
+    html = re.sub(r'(?:src|href)="diagrams/([^"]+\.svg)"',
+                  lambda m: m.group(0).replace("diagrams/", "../assets/diagrams/"),
+                  html)
+    return html
 
 # Hardcoded finding -> figure mapping for findings-g, where the "Show it" lines
 # don't include the figure id in the same bullet (it lives in section F's table).
@@ -208,6 +240,7 @@ def process_file(src_path, out_name):
     html = render_md(md_text)
     html = rewrite_figure_refs(html)
     html = add_heading_ids(html)
+    html = rewrite_legacy_paths(html)
     # Special: G-series + H-series use a known finding->figure mapping
     if out_name == "findings-g":
         html = inject_finding_figures(html, G_FINDING_FIGURES, "finding")

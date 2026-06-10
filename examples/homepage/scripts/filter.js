@@ -83,6 +83,10 @@
     var seriesSel = catalogSel.querySelector("[data-catalog-series]");
     var gridSel = catalogSel.querySelector("[data-catalog-grid]");
     var statusSel = catalogSel.querySelector("[data-catalog-status]");
+    // Optional data-catalog-base="../../assets/diagrams/" lets a sub-page
+    // override the prefix; default is "assets/diagrams/" (works from the
+    // homepage root).
+    var basePrefix = catalogSel.getAttribute("data-catalog-base") || "assets/diagrams/";
 
     // Render all cards
     function render(filter) {
@@ -94,8 +98,9 @@
         var id = entry[0], series = entry[1], title = entry[2], desc = entry[3], thumb = entry[4];
         var card = document.createElement("article");
         card.className = "figure-card";
+        var thumbPath = basePrefix + thumb.replace(/^.*\//, "");
         card.innerHTML =
-          '<div class="figure-thumb"><img src="' + thumb + '" alt="' + id + ' — ' + title + '" loading="lazy"></div>' +
+          '<div class="figure-thumb"><img src="' + thumbPath + '" alt="' + id + ' — ' + title + '" loading="lazy"></div>' +
           '<span class="figure-id">' + id + ' · ' + series + '</span>' +
           '<h4>' + title + '</h4>' +
           '<p>' + desc + '</p>';
