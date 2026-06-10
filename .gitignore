@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Databases (large, regenerable)
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# YOLO model weights
+*.pt
+
+# OS / editor cruft
+.DS_Store
+**/.DS_Store
+~$*
+*.tmp
+
+# Analysis artifacts (the build-time data prep writes these to the source repo, not here)
+IO/analysis/*.pkl
