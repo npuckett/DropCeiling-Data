@@ -24,19 +24,78 @@ def slugify(s):
     s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
     return s
 
+def normalize_fig_id(fig_id):
+    """Normalize unicode hyphens and spacing in catalog ids (e.g. C1‑bw → C1-bw)."""
+    return fig_id.replace("‑", "-").replace("–", "-").strip()
+
+
+FIG_ID_IN_HTML_RE = re.compile(
+    r"<strong>([A-H](?:\d+(?:\.[0-9a-z]+)?(?:[‑\-]bw)?)|P\d+)</strong>",
+    re.IGNORECASE,
+)
+
+
 def find_figure_path(fig_id):
-    """Return the SVG path for a figure id like 'G1' or 'A7.3b'.
-    Path is homepage-relative (assets/diagrams/...) because these
-    fragments are fetched via JS and injected into index.html — relative
-    URLs in injected HTML resolve against the host page, not the source
-    file."""
+    """Return the asset path for a figure id like 'G1', 'A7.3b', 'C1-bw', or 'P1'.
+    Path is homepage-relative (assets/diagrams/... or assets/photos/...) because
+    these fragments are fetched via JS and injected into index.html."""
+    fig_id = normalize_fig_id(fig_id)
+
+    # Photos (P1–P6)
+    if re.match(r"^P\d+$", fig_id, re.IGNORECASE):
+        photos_dir = os.path.join(HERE, "assets", "photos")
+        if os.path.isdir(photos_dir):
+            for f in sorted(os.listdir(photos_dir)):
+                if f.startswith(fig_id.upper() + "_"):
+                    return "assets/photos/" + f
+        return None
+
     diagrams_dir = os.path.join(HERE, "assets", "diagrams")
     if not os.path.isdir(diagrams_dir):
         return None
-    for f in os.listdir(diagrams_dir):
-        if f.startswith(fig_id + "_") and f.endswith(".svg"):
-            return "assets/diagrams/" + f
-    return None
+
+    # Sub-figures like A7.3b → file prefix A7_3b_
+    if re.search(r"\.\d", fig_id):
+        sub = fig_id.replace(".", "_")
+        for f in sorted(os.listdir(diagrams_dir)):
+            if f.startswith(sub) and f.endswith(".svg"):
+                return "assets/diagrams/" + f
+
+    # Series prefix (C1-bw → C1_, then prefer _bw variant)
+    m = re.match(r"^([A-Z]\d+)", fig_id, re.IGNORECASE)
+    if not m:
+        return None
+    base = m.group(1).upper()
+    matches = [
+        f for f in os.listdir(diagrams_dir)
+        if f.startswith(base + "_") and f.endswith(".svg")
+    ]
+    if not matches:
+        return None
+    want_bw = fig_id.endswith("-bw") or fig_id.endswith("bw")
+    if want_bw:
+        bw = [f for f in matches if "_bw" in f]
+        if bw:
+            return "assets/diagrams/" + sorted(bw)[0]
+    non_bw = [f for f in matches if "_bw" not in f]
+    if non_bw and not want_bw:
+        return "assets/diagrams/" + sorted(non_bw)[0]
+    return "assets/diagrams/" + sorted(matches)[0]
+
+
+def make_figure_embed(fig_id, path, catalog_href="figures/index.html"):
+    """HTML block for an inline figure embed."""
+    return (
+        '<figure>'
+        '<a href="' + path + '" target="_blank" rel="noopener">'
+        '<img src="' + path + '" alt="' + fig_id + '" loading="lazy">'
+        '</a>'
+        '<figcaption>'
+        'Figure ' + fig_id + ' &mdash; '
+        '<a href="' + catalog_href + '">view in catalog</a>'
+        '</figcaption>'
+        '</figure>'
+    )
 
 # Build the markdown-it parser with the options we need.
 md = (
@@ -114,18 +173,57 @@ def rewrite_li_with_figure(li_html):
     # the </strong>... part. To keep the bullet readable, we'll just add a
     # trailing figure block.
     embed = (
-        '<figure style="margin:10px 0 0; padding:0;">'
-        '<a href="' + path + '" target="_blank" rel="noopener">'
-        '<img src="' + path + '" alt="' + fig_id + '" loading="lazy" '
-        'style="display:block; max-width:100%; height:auto; '
-        'background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;">'
-        '</a>'
-        '<figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">'
-        'Figure ' + fig_id + ' &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a>'
-        '</figcaption>'
-        '</figure>'
+        '<div class="figure-block" style="margin:10px 0 0;">'
+        + make_figure_embed(fig_id, path, "../figures/index.html")
+        + '</div>'
     )
     return li_html + embed
+
+
+def inject_carried_by_figures(html):
+    """After each 'Carried by:' blockquote, embed referenced figures not already
+    shown in the following move section (until the next h3)."""
+    bq_re = re.compile(r"<blockquote>(.*?)</blockquote>", re.DOTALL)
+    out = []
+    pos = 0
+    for m in bq_re.finditer(html):
+        out.append(html[pos:m.start()])
+        bq_inner = m.group(1)
+        bq_full = m.group(0)
+        if "Carried by" not in bq_inner:
+            out.append(bq_full)
+            pos = m.end()
+            continue
+
+        fig_ids = []
+        for raw_id in FIG_ID_IN_HTML_RE.findall(bq_inner):
+            nid = normalize_fig_id(raw_id)
+            if nid not in fig_ids:
+                fig_ids.append(nid)
+
+        rest = html[m.end():]
+        next_h3 = re.search(r"<h3", rest)
+        lookahead = rest[:next_h3.start()] if next_h3 else rest[:3000]
+        existing_paths = set(re.findall(r"(?:src|href)=\"([^\"]+)\"", lookahead))
+
+        embeds = []
+        for fid in fig_ids:
+            path = find_figure_path(fid)
+            if not path or path in existing_paths:
+                continue
+            embeds.append(make_figure_embed(fid, path))
+
+        out.append(bq_full)
+        if embeds:
+            grid_class = "two-up" if len(embeds) == 2 else ""
+            out.append(
+                '<div class="figure-block ' + grid_class + '">'
+                + "".join(embeds)
+                + "</div>"
+            )
+        pos = m.end()
+    out.append(html[pos:])
+    return "".join(out)
 
 def add_heading_ids(html):
     """Add id="..." to every <h1>/<h2>/h3>/h4> based on its text content."""
@@ -245,6 +343,9 @@ def process_file(src_path, out_name):
     html = rewrite_figure_refs(html)
     html = add_heading_ids(html)
     html = rewrite_legacy_paths(html)
+    # Story: embed figures named in "Carried by:" blockquotes
+    if out_name == "story":
+        html = inject_carried_by_figures(html)
     # Special: G-series + H-series use a known finding->figure mapping
     if out_name == "findings-g":
         html = inject_finding_figures(html, G_FINDING_FIGURES, "finding")
