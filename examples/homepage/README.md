@@ -13,7 +13,8 @@ homepage/
 │   ├── data.js
 │   ├── charts.js
 │   ├── nav.js
-│   └── filter.js
+│   ├── filter.js
+│   └── render_g_figures.py  # G1–G10 from dc-dev SQLite → assets/diagrams/
 ├── _render.py            # dev-time: convert _source/*.md to _rendered/*.html
 ├── _rendered/            # dev-time output of _render.py
 ├── assets/
@@ -34,6 +35,17 @@ homepage/
      section placeholders.
    - `fetch()`s `web_data/{meta,daily,hourly}.json` and renders the 3 charts in
      the `#data` section.
+
+## How to regenerate G-series figures
+
+From `dc-dev` on the Desktop (`tracking_history.db` + `IO/tracking_history.db`):
+
+```sh
+cd examples/homepage
+python3 scripts/render_g_figures.py
+```
+
+Writes SVGs to `assets/diagrams/` and PNG thumbs to `assets/diagrams_thumb/`.
 
 ## How to update the prose
 

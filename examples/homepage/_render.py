@@ -275,7 +275,7 @@ def rewrite_legacy_paths(html):
 # don't include the figure id in the same bullet (it lives in section F's table).
 G_FINDING_FIGURES = {
     "finding-1":            "G1",
-    "finding-2":            None,  # Finding 2 has no figure in the table
+    "finding-2":            "G10",  # diary + first self-diagnosis (text-as-figure)
     "finding-3":            "G9",
     "finding-4":            "G6",
     "finding-5":            "G5",
@@ -283,7 +283,7 @@ G_FINDING_FIGURES = {
     "finding-7":            "G3",
     "finding-8":            "G4",
     "finding-9":            "G2",
-    "finding-10":           "G10",
+    "finding-10":           None,  # Tuesday/Friday — no G-series figure
     "finding-11":           "G8",
 }
 
@@ -336,6 +336,45 @@ def inject_finding_figures(html, mapping, heading_id_prefix):
         i += 3
     return "".join(out)
 
+G_SERIES_IDS = [
+    "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10",
+]
+
+
+def inject_section_f_gallery(html):
+    """After section F heading, embed a catalog grid of all G-series figures."""
+    h2_id = "f-new-figures-worth-building-in-house-style"
+    m = re.search(
+        r'(<h2 id="' + re.escape(h2_id) + r'"[^>]*>.*?</h2>)',
+        html,
+        flags=re.DOTALL,
+    )
+    if not m:
+        return html
+    cards = []
+    for gid in G_SERIES_IDS:
+        path = find_figure_path(gid)
+        if not path:
+            continue
+        cards.append(
+            '<a class="figure-thumb" href="' + path + '" target="_blank" rel="noopener" '
+            'title="Figure ' + gid + '">'
+            '<img src="' + path + '" alt="' + gid + '" loading="lazy">'
+            '</a>'
+        )
+    if not cards:
+        return html
+    gallery = (
+        '<div class="figure-grid g-series-catalog" style="margin:20px 0 28px;">'
+        + "".join(cards)
+        + '<p style="grid-column:1/-1;color:var(--muted);font-size:0.9rem;margin:0;">'
+        'All ten G-series figures (rendered from dc-dev run data). '
+        '<a href="figures/index.html">Open the full catalog</a></p>'
+        '</div>'
+    )
+    return html[:m.end()] + gallery + html[m.end():]
+
+
 def process_file(src_path, out_name):
     with open(src_path) as f:
         md_text = f.read()
@@ -349,6 +388,7 @@ def process_file(src_path, out_name):
     # Special: G-series + H-series use a known finding->figure mapping
     if out_name == "findings-g":
         html = inject_finding_figures(html, G_FINDING_FIGURES, "finding")
+        html = inject_section_f_gallery(html)
     elif out_name == "findings-h":
         html = inject_finding_figures(html, H_FINDING_FIGURES, "finding-h")
     out_path = os.path.join(OUT, out_name + ".html")
