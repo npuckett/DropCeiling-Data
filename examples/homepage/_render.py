@@ -160,8 +160,10 @@ def rewrite_legacy_paths(html):
                   lambda m: m.group(0).replace("diagrams/assets/", "../assets/photos/"),
                   html)
     # diagrams/png/A*.png -> ../assets/diagrams/A*.svg (if svg exists)
-    html = re.sub(r'(?:src|href)="diagrams/png/([^"]+)"',
-                  lambda m: '"' + png_to_svg(m.group(0).strip('"')) + '"',
+    # NOTE: keep the src=/href= prefix from the original match — the inner
+    # png_to_svg() only rewrites the path itself.
+    html = re.sub(r'((?:src|href))="diagrams/png/([^"]+)"',
+                  lambda m: m.group(1) + '="' + png_to_svg("diagrams/png/" + m.group(2)) + '"',
                   html)
     # diagrams/*.svg -> ../assets/diagrams/*.svg
     html = re.sub(r'(?:src|href)="diagrams/([^"]+\.svg)"',
