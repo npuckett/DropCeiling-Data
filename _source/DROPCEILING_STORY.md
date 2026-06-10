@@ -58,8 +58,6 @@ one tangled controller).
 > Carried by: **A0** (master overview — pipeline + nested loops + the point-light output,
 > greyscale, the current canonical system diagram).
 
-![A0 master overview](diagrams/png/A0_master_overview.png)
-
 ### Move 3 — The collapse to twelve
 
 The strongest single idea to leave a reader with: a city corner's worth of context —
