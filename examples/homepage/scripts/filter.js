@@ -8,7 +8,7 @@
   var FIGURE_CATALOG = [
     // [id, series, title, description, thumb (relative to examples/homepage/)]
     // A-series
-    ["A0",  "A", "Master overview", "Pipeline + three nested loops + the point-light output (greyscale).", "assets/diagrams_thumb/A0_master_overview.png"],
+    ["A0",  "A", "Master overview", "Pipeline + three nested loops + the point-light output (greyscale).", "assets/diagrams/A0_master_overview.svg"],
     ["A1",  "A", "Top-level pipeline", "3 processes × 2 channels (tracker → controller → panels; OSC + SQLite; WebSocket viewer + meta-tuner).", "assets/diagrams/A1_pipeline.svg"],
     ["A2",  "A", "Three nested loops", "Reaction ⊂ anticipation ⊂ self-tuning — the conceptual core of the system.", "assets/diagrams/A2_nested_loops.svg"],
     ["A3",  "A", "Mode state machine", "IDLE / FLOW / AWARE / ENGAGED / CROWD with stickiness and dwell transitions.", "assets/diagrams/A3_mode_state_machine.svg"],
