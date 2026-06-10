@@ -1,0 +1,275 @@
+<h1 id="drop-ceiling-renderable-diagrams-mermaid-graphviz">Drop Ceiling — Renderable Diagrams (Mermaid + Graphviz)</h1>
+<p><em>Renderable counterparts to the ◧ DRAW blocks in
+<a href="ACADIA_2026_DIAGRAM_GUIDE.md">ACADIA_2026_DIAGRAM_GUIDE.md</a>. Prose lives there; this
+file is figures only.</em></p>
+<p><strong>Framework choice:</strong> <strong>Mermaid</strong> is used for all flow/state figures (§A) — it renders
+natively in GitHub/VS Code/Notion, exports to SVG/PNG, and its <code>stateDiagram-v2</code> is
+ideal for the mode machine. <strong>Graphviz</strong> is used (§B) only for the three figures where it
+is objectively better: the tiered DB funnel (rank control), the concentric nested loops
+(filled clusters), and the to-scale spatial plan (<code>neato</code> with real cm coordinates).</p>
+<blockquote>
+<p>Rendering quick-start: paste Mermaid blocks into <a href="https://mermaid.live">https://mermaid.live</a> or any Markdown
+preview that supports Mermaid; render Graphviz with <code>dot -Tsvg f.dot -o f.svg</code> (or
+<code>neato</code> where noted), or at <a href="https://dreampuf.github.io/GraphvizOnline">https://dreampuf.github.io/GraphvizOnline</a>.</p>
+</blockquote>
+<hr />
+<h1 id="a-mermaid-figures">§A — Mermaid figures</h1>
+<h2 id="a1-top-level-pipeline-1">A1. Top-level pipeline (§1)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  cam[&quot;2× Reolink cameras&quot;] --&gt;|&quot;RTSP 25 fps&quot;| tracker[&quot;camera_tracker_osc.py&lt;br/&gt;YOLO → floor x,y&quot;]
+  tracker --&gt;|&quot;OSC/UDP :7000&lt;br/&gt;/tracker/count · /tracker/person&quot;| ctrl[&quot;lightController_osc.py&lt;br/&gt;behaviour + tuning + DB + WS&quot;]
+  ctrl --&gt;|&quot;Art-Net/UDP :6454&quot;| panels[&quot;LED panels&quot;]
+  ctrl --&gt;|&quot;WebSocket :8765&quot;| web[&quot;Three.js web viewer&quot;]
+  ctrl --&gt;|&quot;writes&quot;| db[(&quot;SQLite DB&quot;)]
+  db --&gt;|&quot;reads 8 h history&quot;| meta[&quot;autotune_meta_review.py&lt;br/&gt;scheduled 3×/day&quot;]
+  meta --&gt;|&quot;autotune_overrides.json&lt;br/&gt;hot-reload&quot;| ctrl
+
+  classDef proc fill:#1f2a44,stroke:#9db2ff,color:#fff;
+  classDef io fill:#33291f,stroke:#ffcf9d,color:#fff;
+  class tracker,ctrl,meta proc;
+  class cam,panels,web,db io;
+</code></pre>
+<h2 id="a2-three-nested-loops-2">A2. Three nested loops (§2)</h2>
+<p><em>Mermaid can show containment via nested subgraphs (below). For true concentric rings
+see the Graphviz version in §B2.</em></p>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph L3[&quot;LOOP 3 · SELF-TUNING · hours → days&quot;]
+    d3[&quot;meta-review 3×/day + daily learning reshape the PERSONALITY&lt;br/&gt;friction = interaction budget&quot;]
+    subgraph L2[&quot;LOOP 2 · ANTICIPATION · seconds → hours&quot;]
+      d2[&quot;trend analysis 1 / 5 / 30 / 60 min + 30 s flow tracker&lt;br/&gt;bias idle/flow · pre-position the light&quot;]
+      subgraph L1[&quot;LOOP 1 · REACTION · ~33 ms&quot;]
+        d1[&quot;behaviour mode + gestures follow who is present NOW&lt;br/&gt;30 Hz render → Art-Net&quot;]
+      end
+    end
+  end
+</code></pre>
+<h2 id="a3-mode-state-machine-4-the-strongest-mermaid-case">A3. Mode state machine (§4) — <em>the strongest Mermaid case</em></h2>
+<pre><code class="language-mermaid">stateDiagram-v2
+  [*] --&gt; IDLE
+  IDLE --&gt; FLOW: ≥2 ppl/min (5s)
+  FLOW --&gt; IDLE: &lt;2/min (10s)
+  FLOW --&gt; AWARE: ≥10 ppl/min (10s)
+  AWARE --&gt; FLOW: &lt;10/min (8s)
+  IDLE --&gt; AWARE: ≥10/min (8s)
+  AWARE --&gt; IDLE: quiet (12s)
+  IDLE --&gt; ENGAGED: active entry (0s · fast)
+  FLOW --&gt; ENGAGED: active entry (0s · fast)
+  AWARE --&gt; ENGAGED: active entry (0s · fast)
+  ENGAGED --&gt; CROWD: 2+ active (3s)
+  CROWD --&gt; ENGAGED: crowd thins (5s)
+  ENGAGED --&gt; IDLE: empty (5s · slow fade)
+  CROWD --&gt; IDLE: empty (5s · slow fade)
+  note right of ENGAGED
+    Min mode duration 8 s.
+    Engage = fast in (0.4 s),
+    disengage = slow out (3 s).
+    Dwell phases while engaged:
+    notice→greet→engage→bond
+  end note
+</code></pre>
+<h2 id="a4-modulation-chain-how-a-meta-parameter-becomes-light-3c">A4. Modulation chain — how a meta-parameter becomes light (§3c)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  base[&quot;MODE base value&lt;br/&gt;(MODE_PARAMS)&quot;] --&gt; p[&quot;× personality&lt;br/&gt;(meta-param)&quot;]
+  p --&gt; t[&quot;× time-of-day&lt;br/&gt;(TIME_CONFIGS)&quot;]
+  t --&gt; z[&quot;× proximity&lt;br/&gt;(Z distance)&quot;]
+  z --&gt; i[&quot;interpolate&quot;] --&gt; light[&quot;LIGHT&lt;br/&gt;position · brightness · pulse · falloff · speed&quot;]
+
+  ex1[&quot;e.g. pulse 2500 ms&quot;] -.-&gt; p
+  ex2[&quot;× energy 0.77 → ×0.86&quot;] -.-&gt; p
+  ex3[&quot;× evening ×1.3&quot;] -.-&gt; t
+  ex4[&quot;near ×1.4 brightness&quot;] -.-&gt; z
+</code></pre>
+<h2 id="a5-trend-windows-influence-signals-5">A5. Trend windows → influence signals (§5)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  subgraph Q[&quot;DB queries · background thread&quot;]
+    r[&quot;Recent · 1 min&quot;]
+    s[&quot;Short · 5 min&quot;]
+    m[&quot;Medium · 30 min&quot;]
+    l[&quot;Long · 60 min&quot;]
+  end
+  r --&gt; fold
+  s --&gt; fold
+  m --&gt; fold
+  l --&gt; fold
+  fold{{&quot;fold + weight by&lt;br/&gt;idle_trend_weight&quot;}}
+  fold --&gt; aa[&quot;activity_anticipation 0–1&quot;]
+  fold --&gt; fm[&quot;flow_momentum −1…+1&quot;]
+  fold --&gt; en[&quot;energy_level 0–1&quot;]
+  aa --&gt; o1[&quot;idle brightness · wander interval&quot;]
+  fm --&gt; o2[&quot;wander-box X shift&quot;]
+  en --&gt; o3[&quot;idle pulse / speed&quot;]
+</code></pre>
+<h2 id="a6-aggression-as-a-regulated-tank-5">A6. Aggression as a regulated tank (§5)</h2>
+<pre><code class="language-mermaid">flowchart TB
+  inflow[&quot;ignored time + passers-by who don't stop&quot;] --&gt;|&quot;raise&quot;| tank([aggression level 0–1])
+  engage[&quot;someone engages&quot;] --&gt;|&quot;lower&quot;| tank
+  cap[&quot;time-of-day cap (hourly curve)&lt;br/&gt;≈0 at night · peak at lunch&quot;] -.-&gt;|&quot;ceiling valve&quot;| tank
+  tank --&gt; out[&quot;wider/faster wander · more BORED gestures · brighter pulses&quot;]
+</code></pre>
+<h2 id="a7-self-tuning-feedback-with-the-interaction-budget-6c-key-figure">A7. Self-tuning feedback with the interaction budget (§6c) — <em>key figure</em></h2>
+<pre><code class="language-mermaid">flowchart TB
+  push[&quot;live presence + short-term trends&quot;] --&gt;|&quot;PUSH&quot;| tuner
+  tuner[&quot;per-frame tuner · SmartAutoTuner ~8 s&lt;br/&gt;gradient ascent on engagement score&quot;]
+  resist[&quot;RESIST&lt;br/&gt;budget + mean-reversion to home + caps&quot;] -.-&gt;|&quot;throttle Δ&quot;| tuner
+  tuner --&gt;|&quot;writes Δ&quot;| metap[&quot;meta-parameters&lt;br/&gt;(light personality)&quot;]
+  tuner --&gt;|&quot;logs every change&quot;| dba[(&quot;behavior_adjustments&quot;)]
+  metap --&gt; light[&quot;light output&quot;]
+  dba --&gt;|&quot;reads 8 h history&quot;| review[&quot;meta-review 3×/day&lt;br/&gt;diagnose: stuck · static · starved&lt;br/&gt;budget too tight / loose&quot;]
+  review --&gt;|&quot;META: rewrite home/floors/caps/budget&lt;br/&gt;autotune_overrides.json hot-reload&quot;| resist
+
+  classDef force fill:#3a1f1f,stroke:#ff9d9d,color:#fff;
+  class push,resist,review force;
+</code></pre>
+<h2 id="a8-interaction-budget-mechanism-6b">A8. Interaction-budget mechanism (§6b)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  refill[&quot;refill = max / restore_seconds (600 s)&quot;] --&gt; budget([budget · max 200])
+  engaged[&quot;+ bonus when engaged&quot;] --&gt; budget
+  budget --&gt; check{&quot;total cost &amp;gt; budget?&quot;}
+  spend[&quot;spend = Σ abs(Δ) × cost_scale (30)&quot;] --&gt; check
+  check --&gt;|&quot;yes&quot;| throttle[&quot;scale all Δ down (throttle)&quot;]
+  check --&gt;|&quot;no&quot;| apply[&quot;apply Δ · subtract cost&quot;]
+  throttle --&gt; budget
+  apply --&gt; budget
+</code></pre>
+<h2 id="a9-self-analysis-mirror-loop-7">A9. Self-analysis mirror loop (§7)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  light[&quot;light output&quot;] --&gt; rec[&quot;record own state&lt;br/&gt;(light_behavior table)&quot;]
+  rec --&gt; read[&quot;read it back&quot;]
+  read --&gt; metrics[&quot;position entropy 1 h · response similarity 24 h&lt;br/&gt;mode distribution 24 h · position cooldown 30 s&quot;]
+  metrics --&gt;|&quot;bias to unexplored space · force more variety&quot;| light
+</code></pre>
+<h2 id="a10-real-time-ingestion-pipeline-9">A10. Real-time ingestion pipeline (§9)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  rtsp[&quot;2× Reolink RTSP&quot;] --&gt; yolo[&quot;batched YOLO · CUDA · 25 fps&quot;]
+  yolo --&gt; proj[&quot;ArUco-calibrated foot → floor projection (cm)&quot;]
+  proj --&gt; fuse[&quot;cross-camera fusion&lt;br/&gt;EMA smoothing · velocity coasting&quot;]
+  fuse --&gt;|&quot;OSC :7000&lt;br/&gt;/tracker/count · /tracker/person&quot;| ctrl[&quot;controller&lt;br/&gt;zone-classify (active/passive) · velocity · callbacks&quot;]
+  ctrl --&gt; beh[&quot;behaviour system&quot;]
+  ctrl --&gt; dbw[(&quot;DB write&quot;)]
+  ctrl --&gt;|&quot;Art-Net :6454 · per-panel DMX&quot;| panels[&quot;LED panels (distance-falloff)&quot;]
+</code></pre>
+<h2 id="a11-web-interface-two-data-planes-10">A11. Web interface — two data planes (§10)</h2>
+<pre><code class="language-mermaid">flowchart LR
+  ctrl[&quot;controller&quot;]
+  ctrl --&gt;|&quot;WebSocket :8765 · ~15 fps&quot;| imm[&quot;IMMEDIATE plane · Three.js live&lt;br/&gt;light · people · mode · gesture · status&quot;]
+  ctrl --&gt; gen[&quot;generate_reports.py · nightly&lt;br/&gt;reports/daily/*.json + _index&quot;]
+  gen --&gt; pages[&quot;GitHub Pages&quot;]
+  pages --&gt;|&quot;reports.js fetch + charts&quot;| trends[&quot;TRENDS plane · charts page&lt;br/&gt;hourly curves · peak/quiet · flow balance · mode mix&quot;]
+  funnel[&quot;transport: Tailscale Funnel exposes :8765 as wss:// for HTTPS&quot;] -.-&gt; ctrl
+
+  classDef live fill:#1f3a2a,stroke:#9dffc0,color:#fff;
+  classDef slow fill:#2a2a3a,stroke:#b0b0ff,color:#fff;
+  class imm live;
+  class trends slow;
+</code></pre>
+<hr />
+<h1 id="b-graphviz-figures-where-it-beats-mermaid">§B — Graphviz figures (where it beats Mermaid)</h1>
+<h2 id="b1-tiered-database-funnel-8-rank-control-gives-clean-columns">B1. Tiered database funnel (§8) — <em>rank control gives clean columns</em></h2>
+<pre><code class="language-dot">digraph db {
+  rankdir=LR;
+  node [shape=box, style=&quot;rounded,filled&quot;, fontname=&quot;Helvetica&quot;, fillcolor=&quot;#eef2ff&quot;];
+  edge [fontname=&quot;Helvetica&quot;, fontsize=10];
+
+  subgraph cluster_ingest {
+    label=&quot;INGEST · per OSC msg · 48 h&quot;; style=filled; color=&quot;#f5f5f5&quot;;
+    te  [label=&quot;tracking_events\nx,z,vel,zone,flow&quot;];
+    lb  [label=&quot;light_behavior\nmode,pos,bright,gesture&quot;];
+    ba  [label=&quot;behavior_adjustments\n+budget before/after/cost&quot;];
+    ps  [label=&quot;person_sessions&quot;];
+  }
+  subgraph cluster_agg {
+    label=&quot;AGGREGATE · hourly / midnight&quot;; style=filled; color=&quot;#f5f5f5&quot;;
+    hs  [label=&quot;hourly_stats  (∞)&quot;, fillcolor=&quot;#e6ffe6&quot;];
+    adl [label=&quot;autotune_daily_learnings  (∞)&quot;, fillcolor=&quot;#e6ffe6&quot;];
+  }
+  subgraph cluster_forever {
+    label=&quot;KEPT FOREVER&quot;; style=filled; color=&quot;#f5f5f5&quot;;
+    ds  [label=&quot;daily_stats_v2  (∞)&quot;, fillcolor=&quot;#e6ffe6&quot;];
+    mtr [label=&quot;meta_tuning_reviews  (∞)&quot;, fillcolor=&quot;#e6ffe6&quot;];
+  }
+
+  te -&gt; hs -&gt; ds;
+  ba -&gt; adl;
+  ba -&gt; mtr;
+  lb -&gt; sa [label=&quot;self-analysis (§7)&quot;, style=dashed];
+  sa [label=&quot;anti-repetition\nmetrics&quot;, shape=note, fillcolor=&quot;#fff6e6&quot;];
+
+  { rank=same; te; lb; ba; ps; }
+  { rank=same; hs; adl; }
+  { rank=same; ds; mtr; }
+}
+</code></pre>
+<h2 id="b2-concentric-nested-loops-2-filled-clusters-true-containment">B2. Concentric nested loops (§2) — <em>filled clusters = true containment</em></h2>
+<pre><code class="language-dot">digraph loops {
+  compound=true; rankdir=TB; fontname=&quot;Helvetica&quot;;
+  node [shape=point, width=0.01, style=invis];
+
+  subgraph cluster_L3 {
+    label=&quot;LOOP 3 · SELF-TUNING · hours → days\n(meta-review 3×/day + daily learning · friction = interaction budget)&quot;;
+    style=filled; fillcolor=&quot;#e8ecff&quot;; fontname=&quot;Helvetica-Bold&quot;;
+    subgraph cluster_L2 {
+      label=&quot;LOOP 2 · ANTICIPATION · seconds → hours\n(trends 1/5/30/60 min + 30 s flow · pre-position light)&quot;;
+      style=filled; fillcolor=&quot;#dff0e6&quot;;
+      subgraph cluster_L1 {
+        label=&quot;LOOP 1 · REACTION · ~33 ms\n(mode + gestures follow who is present NOW · 30 Hz)&quot;;
+        style=filled; fillcolor=&quot;#ffe9d6&quot;;
+        core [label=&quot;LIGHT&quot;, shape=circle, style=filled, fillcolor=&quot;#fff3b0&quot;, width=0.6, fixedsize=false];
+      }
+    }
+  }
+}
+</code></pre>
+<h2 id="b3-spatial-plan-to-scale-9-neato-pins-real-cm-coordinates">B3. Spatial plan, to scale (§9) — <em><code>neato</code> pins real cm coordinates</em></h2>
+<p><em>Coordinates from the source (cm; X along the storefront 0 → −300, Z out toward the
+street). Node positions are <code>X·0.02, Z·0.02</code> inches so the plan is geometrically true.
+Render with <strong>neato</strong>: <code>neato -Tsvg plan.dot -o plan.svg</code>. Overlay the active/passive
+zone rectangles in your drawing tool (bounds noted below).</em></p>
+<pre><code class="language-dot">graph plan {
+  layout=neato;
+  node [shape=box, fontname=&quot;Helvetica&quot;, fontsize=9, style=filled];
+  edge [style=invis];
+
+  // --- LED panel units (Z = 0) ---
+  U0 [label=&quot;U0&quot;, pos=&quot;-0.6,0!&quot;,  fillcolor=&quot;#c9d4ff&quot;];
+  U1 [label=&quot;U1&quot;, pos=&quot;-2.2,0!&quot;,  fillcolor=&quot;#c9d4ff&quot;];
+  U2 [label=&quot;U2&quot;, pos=&quot;-3.8,0!&quot;,  fillcolor=&quot;#c9d4ff&quot;];
+  U3 [label=&quot;U3&quot;, pos=&quot;-5.4,0!&quot;,  fillcolor=&quot;#c9d4ff&quot;];
+
+  // --- Cameras (Z = 78) ---
+  C1 [label=&quot;Cam 1\n(-30, 78)&quot;,  pos=&quot;-0.6,1.56!&quot;, shape=diamond, fillcolor=&quot;#ffd0d0&quot;];
+  C2 [label=&quot;Cam 2\n(-270, 78)&quot;, pos=&quot;-5.4,1.56!&quot;, shape=diamond, fillcolor=&quot;#d0d0ff&quot;];
+
+  // --- ArUco markers (front row Z=168, back row Z=219) ---
+  M0 [label=&quot;0&quot;, pos=&quot;-0.6,3.36!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+  M1 [label=&quot;1&quot;, pos=&quot;-3.0,3.36!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+  M2 [label=&quot;2&quot;, pos=&quot;-5.4,3.36!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+  M3 [label=&quot;3&quot;, pos=&quot;-0.6,4.38!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+  M6 [label=&quot;6&quot;, pos=&quot;-3.0,4.38!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+  M4 [label=&quot;4&quot;, pos=&quot;-5.4,4.38!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+  M5 [label=&quot;5 · subway wall\n(-150, 628)&quot;, pos=&quot;-3.0,12.56!&quot;, shape=circle, fillcolor=&quot;#fff0c0&quot;];
+
+  // --- Light home position (approx panel field centre) ---
+  L  [label=&quot;light\n(home)&quot;, pos=&quot;-3.0,0.4!&quot;, shape=octagon, fillcolor=&quot;#fff39a&quot;];
+
+  // --- Zone reference labels (rectangles to be drawn in illustration) ---
+  AZ [label=&quot;ACTIVE ZONE\nX −350…50 · Z 78…283&quot;, pos=&quot;0.9,2.0!&quot;, shape=plaintext, fillcolor=none];
+  PZ [label=&quot;PASSIVE ZONE\nX −475…175 · Z 283…633&quot;, pos=&quot;1.2,5.5!&quot;, shape=plaintext, fillcolor=none];
+}
+</code></pre>
+<hr />
+<h2 id="notes-fidelity">Notes / fidelity</h2>
+<ul>
+<li><strong>State-machine timings</strong> (A3) are the V6.5c stickiness values from <code>MODE_STICKINESS</code>
+in <code>light_behavior.py</code>; mode thresholds (≥2 / ≥10 ppl·min⁻¹, ≥1 / ≥2 active) from
+<code>determine_mode()</code>.</li>
+<li><strong>Budget constants</strong> (A7/A8) — <code>max 200</code>, <code>restore_seconds 600</code>, <code>cost_scale 30</code> — are
+the production values from <code>autotune_overrides.json</code>.</li>
+<li>The <strong>spatial plan</strong> (B3) uses authoritative <code>TRACKZONE</code> / <code>PASSIVE_TRACKZONE</code> and
+camera/marker coordinates from <code>lightController_osc.py</code>. Mermaid cannot pin geometry,
+which is why this one is Graphviz <code>neato</code>; for a publication figure, treat it as a
+layout reference and redraw to scale in CAD/Illustrator with the zone rectangles
+filled.</li>
+<li>If you prefer a single framework end-to-end, B1 and B2 also have the Mermaid
+equivalents above (A2, A8-area); only B3 truly requires Graphviz.</li>
+</ul>
+<pre><code></code></pre>

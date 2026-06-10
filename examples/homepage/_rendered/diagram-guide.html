@@ -1,0 +1,2156 @@
+<h1 id="drop-ceiling-system-logic-for-diagrams-amp-drawings">Drop Ceiling — System Logic for Diagrams &amp; Drawings</h1>
+<p><em>Companion to <a href="ACADIA_2026_SOFTWARE_REPORT.md">ACADIA_2026_SOFTWARE_REPORT.md</a>. This
+document pairs short prose with structured &quot;diagram-ready&quot; blocks. Each block marked
+<strong>◧ DRAW</strong> is a suggestion for a figure you can lift directly. Production software =
+<strong>V6.5c</strong> (March 2026), <code>dc-dev/IO/</code>.</em></p>
+<blockquote>
+<p><strong>Rendered figures now exist</strong> in <a href="diagrams"><code>diagrams/</code></a> (SVG + PNG, editable
+Mermaid/Graphviz sources in <a href="diagrams/src"><code>diagrams/src/</code></a>; see
+<a href="diagrams/README.md"><code>diagrams/README.md</code></a>). The ◧ DRAW blocks below are the design
+intent; the <code>diagrams/</code> IDs (A1–A11, B1–B3, <strong>A7.1–A7.7 + A7.3b</strong>, <strong>C1–C5</strong>) are the
+built versions. Three figure families:
+<strong>A/B</strong> = how the system <em>decides</em>; <strong>A7.x</strong> = the self-tuning loop exploded node by
+node; <strong>C</strong> = how all of that <em>collapses to 12 light values</em> (§3d–§3f). A handful of
+<strong>captured project images</strong> (photos/renders/screens, IDs <strong>P1–P6</strong>) live in
+<a href="diagrams/assets"><code>diagrams/assets/</code></a> and are embedded where relevant.</p>
+</blockquote>
+<p><strong>◧ Diagram P3 — the project's own system diagram</strong> (an earlier, project-made overview;
+the A-series figures in this guide are the cleaned, verified reconstruction of it):</p>
+<p><img src="diagrams/assets/P3_original_system_diagram.png" alt="P3 — The original Drop Ceiling system diagram: camera+YOLO → person manager → behavior system → autotuning/feedback/daily-learning → wander box → point light → panel system → Art-Net, with the web viewer branch" /></p>
+<hr />
+<h2 id="1-the-whole-system-in-one-picture">1. The whole system in one picture</h2>
+<p>Drop Ceiling turns a sidewalk into an instrument. Two cameras watch pedestrians; a
+single simulated point light, hovering in a 3D field of LED panels, responds to them.
+What makes it more than a motion sensor is that it runs <strong>three nested control loops at
+three timescales</strong> — it reacts to the instant, anticipates the next hour, and reshapes
+its own personality over days — with an <em>interaction budget</em> providing the friction that
+keeps that self-adaptation deliberate rather than twitchy.</p>
+<p><strong>◧ Photo P1 — the installation in situ</strong> (Haworth Canada showroom window, 55 University
+Ave, Toronto; twelve panels in four sandwich-board units, seen from the sidewalk at night):</p>
+<p><img src="diagrams/assets/P1_installation_photo.jpg" alt="P1 — Drop Ceiling installed in the Haworth showroom window at night: four illuminated free-standing units of three panels each, viewed from the sidewalk between the building's columns" /></p>
+<p><strong>◧ Render P2 — the four units / panel geometry</strong> (each unit = 3 panels, numbered 1/2/3;
+the layout the whole spatial model is built on, §15d):</p>
+<p><img src="diagrams/assets/P2_unit_geometry.png" alt="P2 — 3D render of the four Drop Ceiling units, each a sandwich-board of three numbered panels (1 upper, 2 and 3 angled), matching world_coordinates.json" /></p>
+<p><strong>◧ Figure A1 — Top-level pipeline (left-to-right signal flow):</strong></p>
+<p><img src="diagrams/png/A1_pipeline.png" alt="A1 — Top-level pipeline: tracker → controller → panels, with WebSocket viewer, SQLite DB, and the 3×/day meta-tuner loop" /></p>
+<p>Three OS processes (each a <code>systemd</code> service): <strong>tracker</strong>, <strong>controller</strong>,
+<strong>meta-tuner</strong>. Everything they share passes through two channels — <strong>OSC</strong> (live
+positions) and the <strong>SQLite database</strong> (memory).</p>
+<hr />
+<h2 id="2-the-three-nested-loops-the-conceptual-core">2. The three nested loops (the conceptual core)</h2>
+<p>This is the single most important diagram for the submission — it shows the project is
+about <em>time and adaptation</em>, not just reactivity.</p>
+<p><strong>◧ Figure A2 — Three concentric loops, fastest innermost:</strong></p>
+<p><img src="diagrams/png/A2_nested_loops.png" alt="A2 — Three nested control loops: reaction (~33 ms) inside anticipation (sec–hours) inside self-tuning (hours–days)" /></p>
+<table>
+<thead>
+<tr>
+<th>Loop</th>
+<th>Cadence</th>
+<th>Reads</th>
+<th>Writes / Affects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1 — Reaction</strong></td>
+<td>~30 Hz</td>
+<td>live OSC people + zones</td>
+<td>light position, brightness, pulse, gesture</td>
+</tr>
+<tr>
+<td><strong>2 — Anticipation</strong></td>
+<td>1.5 s (flow), background thread (trends)</td>
+<td>DB trend queries (1/5/30/60 min)</td>
+<td>wander box bias, idle energy, mode selection</td>
+</tr>
+<tr>
+<td><strong>3 — Self-tuning</strong></td>
+<td>3×/day (+ midnight daily learning)</td>
+<td>8 h of DB history</td>
+<td>rewrites meta-parameters via <code>autotune_overrides.json</code></td>
+</tr>
+</tbody>
+</table>
+<p>The outer loops never move the light — only the reaction loop does. Instead, each loop
+sets the terms for the one inside it. Loop 2 changes <em>the situation</em> the light is
+responding to: it pre-positions the wander box and raises or lowers the idle energy so
+the light is already leaning toward arriving traffic. Loop 3 changes <em>the disposition</em>
+with which it responds to any situation at all: it slowly rewrites the personality
+coefficients that turn &quot;a person is here&quot; into a particular brightness, speed, and pulse.
+The first is transient and contextual; the second is persistent and characterological.</p>
+<p>Put differently, the indirection deepens at each level: <strong>Loop 1 sets the light's values,
+Loop 2 sets its context, Loop 3 sets the coefficients of its reaction</strong> (and even rewrites
+the constants that govern its own adjustments). Three consequences follow, and they are
+the reason the architecture is built this way:</p>
+<ol>
+<li><strong>It is the mechanism of &quot;character.&quot;</strong> A purely reactive light feels identical on day
+1 and day 100. Because Loop 3 slowly drifts the <em>coefficients</em> of reaction, the same
+stimulus produces a measurably different response months later — which is, concretely,
+what &quot;grows a personality&quot; means here.</li>
+<li><strong>Timescale separation buys stability.</strong> Slow self-modification physically <em>cannot</em>
+cause fast flicker: only the fast, smoothed reaction loop ever reaches the fixtures,
+and the slow loops are budget-limited and gentle. That separation is what makes a
+self-rewriting system safe to run 24/7.</li>
+<li><strong>It stays authorable.</strong> Because the three concerns are kept distinct, a designer tunes
+a temperament, an anticipation behaviour, and a reaction as three legible things rather
+than one tangled controller.</li>
+</ol>
+<hr />
+<h2 id="3-meta-parameters-the-light-s-personality">3. Meta-parameters — the light's personality</h2>
+<p>Prose: the behaviour <em>mode</em> decides the <strong>shape</strong> of a response (e.g. &quot;follow the
+nearest person, brighten, tighten the beam&quot;). The <strong>meta-parameters</strong> decide its
+<strong>flavour</strong> (eager vs reserved, brisk vs contemplative, bright vs dim). They are the
+only variables the self-tuning loop is allowed to move — which is exactly why the light
+can &quot;grow a character&quot; over weeks. Defined in <code>MetaParameters</code>
+(<a href="light_behavior.py">light_behavior.py:429</a>), persisted in <code>slider_settings.json</code>.</p>
+<h3 id="3a-six-personality-axes-0-0-1-0">3a. Six personality axes (0.0 – 1.0)</h3>
+<p><strong>◧ DRAW — a 6-spoke radar/wheel; show &quot;neutral 0.5&quot; ring vs &quot;as-deployed&quot; values.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>0.0 ⟶ 1.0</th>
+<th>Light outputs it bends</th>
+<th>As-deployed*</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>responsiveness</code></td>
+<td>contemplative ⟶ reactive</td>
+<td>follow-smoothing, move speed, transition time</td>
+<td><strong>0.83</strong></td>
+</tr>
+<tr>
+<td><code>energy</code></td>
+<td>calm ⟶ lively</td>
+<td>pulse rate, max brightness, gesture frequency</td>
+<td><strong>0.77</strong></td>
+</tr>
+<tr>
+<td><code>attention_span</code></td>
+<td>distractible ⟶ loyal</td>
+<td>follow-smoothing, dwell rewards, mode stickiness</td>
+<td>0.51</td>
+</tr>
+<tr>
+<td><code>sociability</code></td>
+<td>reserved ⟶ eager</td>
+<td>gesture chance, entrance flash, engaged brightness</td>
+<td>0.44</td>
+</tr>
+<tr>
+<td><code>exploration</code></td>
+<td>stays put ⟶ wanders</td>
+<td>wander-box size, wander interval, position variety</td>
+<td><strong>0.71</strong></td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td>forgets ⟶ avoids repeats</td>
+<td>anti-repetition strength, trend-influence weight</td>
+<td>0.49</td>
+</tr>
+</tbody>
+</table>
+<p>* from <code>slider_settings.json</code> — the tuner had evolved a <strong>bright, brisk, exploratory</strong>
+character, far from the 0.5 neutral start. <em>(Good caption for a &quot;before/after personality&quot; figure.)</em></p>
+<h3 id="3b-six-output-multipliers-scaling-knobs">3b. Six output multipliers (scaling knobs)</h3>
+<p><strong>◧ DRAW — a small &quot;mixing console&quot; of faders.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Multiplier</th>
+<th>Default</th>
+<th>Effect</th>
+<th>As-deployed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>brightness_global</code></td>
+<td>1.0</td>
+<td>master brightness gain</td>
+<td><strong>2.43</strong></td>
+</tr>
+<tr>
+<td><code>speed_global</code></td>
+<td>1.0</td>
+<td>all movement speeds</td>
+<td><strong>1.46</strong></td>
+</tr>
+<tr>
+<td><code>pulse_global</code></td>
+<td>1.0</td>
+<td>breathing/pulse rate</td>
+<td>0.66</td>
+</tr>
+<tr>
+<td><code>follow_speed_global</code></td>
+<td>1.0</td>
+<td>chase speed onto a person</td>
+<td>0.60</td>
+</tr>
+<tr>
+<td><code>dwell_influence</code></td>
+<td>1.0</td>
+<td>how strongly dwell-time bonuses apply</td>
+<td>0.49</td>
+</tr>
+<tr>
+<td><code>idle_trend_weight</code></td>
+<td>1.0</td>
+<td>how strongly passive-zone trends bend idle</td>
+<td>0.51</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3c-how-a-meta-parameter-becomes-light-the-modulation-chain">3c. How a meta-parameter becomes light (the modulation chain)</h3>
+<p><strong>◧ Figure A4 — a horizontal &quot;signal chain&quot; / pipeline of multiply stages:</strong></p>
+<p><img src="diagrams/png/A4_modulation_chain.png" alt="A4 — Modulation chain: mode base value × personality × time-of-day × proximity → interpolate → light" /></p>
+<pre><code> MODE base value  ×  META-PARAM  ×  TIME-OF-DAY  ×  PROXIMITY  →  interp →  LIGHT
+ e.g. pulse 2500 ms  × energy 0.77→0.86  × evening ×1.3  × near  →  ~2800 ms
+ e.g. brightness 8–30  × brightness_global  × ×0.6 late-night  × near ×1.4  →  final DMX
+</code></pre>
+<p><em>(Worked numeric examples, kept as text since A4 shows the structure.)</em></p>
+<p>Key idea for the figure: <strong>the light fixture only understands a handful of physical
+quantities</strong> — position, brightness min/max, pulse speed, falloff radius/shape, move
+speed. The whole meta-parameter system exists to colour those few numbers. The next
+three sub-sections (§3d–§3f) follow that thread all the way to the wire — the part the
+first round of diagrams under-told.</p>
+<hr />
+<h3 id="3d-the-output-funnel-from-a-whole-system-to-12-light-values-the-c-series">3d. The output funnel — from a whole system to 12 light values (the C-series)</h3>
+<p>Prose: this is the point the project most needs to make legible. Everything above —
+two cameras, four trend windows, a tiered database, a 3×/day self-review, twelve
+personality meta-parameters, five modes and sixteen gestures — exists only to set the
+state of <strong>one virtual point light</strong>. And that light, in turn, is read by the panels as
+just <strong>12 numbers</strong>: one brightness byte per panel, recomputed from scratch ~30 times a
+second. The drama of the piece is this collapse from enormous contextual complexity to a
+near-trivial output, happening continuously and live.</p>
+<p>Be precise about the two layers (they're easy to conflate):</p>
+<ul>
+<li><strong>The &quot;light state&quot; (the pinch point)</strong> ≈ <strong>9 scalars</strong> held on the <code>PointLight</code>
+object: <code>position</code> (x, y, z), <code>current_brightness</code> (intensity), <code>falloff_radius</code>, and
+the beam <em>shape</em> — <code>falloff_scale</code> (sx, sy, sz) + <code>falloff_rotation</code>.
+(<code>PointLight</code>, <a href="lightController_osc.py">lightController_osc.py:2217</a>.)</li>
+<li>**The &quot;output&quot; ** = <strong>12 DMX bytes</strong>, one 0–255 brightness per panel (4 units × 3
+panels), sent over Art-Net universe 0. (<code>StupidArtnet(TARGET_IP, UNIVERSE, 12, FPS)</code>,
+<a href="lightController_osc.py">:4604</a>.)</li>
+</ul>
+<p>So the honest headline is <strong>many → ~9-value light state → 12 panel bytes</strong>, not &quot;12
+inputs.&quot; The light is <em>monochrome per panel</em> — the system computes one intensity per
+panel, not RGB. That restraint is part of the story: extraordinary behavioural
+complexity expressed through a deliberately minimal palette.</p>
+<p><strong>◧ Figure C1 — the hero funnel:</strong> a wide top band of all subsystems narrowing through a
+single waist labelled <em>PointLight (≈9 values)</em> and fanning back out to a row of 12 panel
+cells → Art-Net.</p>
+<p><img src="diagrams/png/C1_funnel_to_12.png" alt="C1 — The funnel: the whole adaptive system collapses to the PointLight state, then fans back out to 12 DMX panel values" /></p>
+<h3 id="3e-the-pinch-point-who-writes-each-light-value-c2">3e. The pinch point — who writes each light value (C2)</h3>
+<p>Prose: the nine scalars look trivial, but each is the <em>sum of the whole system pressing
+on one number.</em> This is the figure that connects §3c's modulation chain to a concrete
+field. (<code>PointLight</code> fields set in the main loop,
+<a href="lightController_osc.py">lightController_osc.py:4956</a>.)</p>
+<p><strong>◧ DRAW — C2, a two-column table: &quot;upstream system writes…&quot; → &quot;the few values&quot;.</strong>
+<em>(Rendered: <code>diagrams/C2_light_state_pinch</code>.)</em></p>
+<table>
+<thead>
+<tr>
+<th>Light value (read at render)</th>
+<th>What collapses into it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>position</code> (x, y, z)</td>
+<td>mode + wander + follow + gestures (the movement layer)</td>
+</tr>
+<tr>
+<td><code>current_brightness</code></td>
+<td>mode base × <code>brightness_global</code> × time-of-day × proximity × dwell × breathing × bloom × entry-pulse, <strong>hard-capped at 600</strong> (V6.5c)</td>
+</tr>
+<tr>
+<td><code>pulse_speed</code> (→ brightness over time)</td>
+<td>mode base × <code>pulse_global</code> × time-of-day</td>
+</tr>
+<tr>
+<td><code>falloff_radius</code></td>
+<td>mode base × breathing</td>
+</tr>
+<tr>
+<td><code>falloff_scale</code> (sx,sy,sz) + <code>falloff_rotation</code></td>
+<td>SWEEP/FOCUS gestures × ambient oscillation × V6 falloff manager</td>
+</tr>
+<tr>
+<td><code>move_speed</code></td>
+<td>mode base × <code>speed_global</code> × proximity × pedestrian speed-match</td>
+</tr>
+</tbody>
+</table>
+<p><code>current_brightness</code> is itself dynamic <em>between</em> tuning events: it pulses as
+<code>brightness_min + (brightness_max − brightness_min) × (sin(pulse_phase)+1)/2</code> — the
+visible &quot;breathing.&quot; (<code>PointLight.get_brightness</code>, <a href="lightController_osc.py">:2248</a>.)</p>
+<h3 id="3f-per-panel-math-the-12-channel-map-c3-c4-c5">3f. Per-panel math + the 12-channel map (C3, C4, C5)</h3>
+<p>Prose: each panel computes its own brightness from the <em>same</em> light state, by distance.
+This is where &quot;falloff&quot; stops being a word and becomes the actual geometry — and where
+the anisotropic shape (scale + rotation) lets a gesture stretch or steer the beam across
+the panel field. (<code>PanelSystem.calculate_brightness</code>,
+<a href="lightController_osc.py">lightController_osc.py:2299</a>.)</p>
+<p><strong>◧ Figure C3 — the per-panel pipeline (runs ×12 every frame):</strong></p>
+<p><img src="diagrams/png/C3_per_panel_math.png" alt="C3 — Per-panel math: displacement → rotate → anisotropic scale → distance → linear falloff → × intensity → clamp to one DMX byte" /></p>
+<p><strong>◧ DRAW — C4, the wiring map:</strong> 4 units × 3 panels → DMX channels 0–11 → 512-byte frame
+(only 12 bytes used) → <code>set_single_value</code> → Art-Net <code>:6454</code> universe 0, target
+<code>10.42.0.200</code> @ 30 fps. <em>(Rendered: <code>diagrams/C4_panel_dmx_map</code>.)</em></p>
+<p><strong>◧ DRAW — C5, one frame as a sequence:</strong> OSC → BehaviorSystem → V6Integration → set
+PointLight fields → <code>PointLight.update(dt)</code> advances pulse + moves → <code>PanelSystem</code> ×12 →
+Art-Net + DB record + WebSocket. The point of the figure is that <strong>the entire funnel
+re-runs every frame (~30 Hz)</strong> — the collapse is continuous, not a one-time build.
+<em>(Rendered: <code>diagrams/C5_per_frame_sequence</code>.)</em></p>
+<blockquote>
+<p><strong>Caption-ready takeaway:</strong> <em>A camera array, a self-revising personality, and a
+permanent memory — all of it, every 33 milliseconds, becomes twelve numbers between 0
+and 255.</em> That sentence is the project's &quot;complexity → simplicity&quot; thesis and the
+reason the C-series exists.</p>
+</blockquote>
+<hr />
+<h2 id="4-reaction-loop-modes-amp-gestures-timescale-instant">4. Reaction loop — modes &amp; gestures (timescale: instant)</h2>
+<p>Mode is chosen by <code>determine_mode()</code> (<a href="light_behavior.py">light_behavior.py:996</a>) from
+live active/passive counts, with <strong>stickiness</strong> (conditions must persist) and an
+<strong>8 s minimum dwell</strong> preventing flicker.</p>
+<p><strong>◧ Figure A3 — a state machine. Nodes = modes; edges = transitions labelled with the
+trigger and the transition duration. Engage-edges are fast, disengage-edges slow.</strong></p>
+<p><img src="diagrams/png/A3_mode_state_machine.png" alt="A3 — Behaviour mode state machine: IDLE / FLOW / AWARE / ENGAGED / CROWD with persistence and transition timings" /></p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Trigger</th>
+<th>Character (move / bright / pulse / falloff)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>IDLE</strong></td>
+<td>&lt;2 ppl/min</td>
+<td>gentle wander or <em>park</em>; 20 cm/s, dim, slow 4 s pulse, wide 90 cm</td>
+</tr>
+<tr>
+<td><strong>FLOW</strong></td>
+<td>≥2 ppl/min sidewalk</td>
+<td>drift with traffic; 25 cm/s, medium, 75 cm</td>
+</tr>
+<tr>
+<td><strong>AWARE</strong></td>
+<td>≥10 ppl/min sidewalk</td>
+<td>energetic, wide reach; 35 cm/s, brighter, fast 2.2 s pulse</td>
+</tr>
+<tr>
+<td><strong>ENGAGED</strong></td>
+<td>1 in active zone</td>
+<td>follow nearest; breathing + subtle gestures; tight 45 cm</td>
+</tr>
+<tr>
+<td><strong>CROWD</strong></td>
+<td>2+ in active zone</td>
+<td>follow centroid; brightest/fastest; may <em>bloom</em> all panels</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Dwell phases</strong> (deepen over time, for an &quot;engagement timeline&quot; figure):
+<code>notice 0–3 s → greet 3–10 s → engage 10–30 s → bond 30 s+</code>, each unlocking warmer,
+less frequent gestures. <strong>Gesture library</strong> = 16 one-shot/ongoing motions (nod, lean,
+sway, orbit, settle, breathe, bloom, sweep, focus…).</p>
+<hr />
+<h2 id="5-anticipation-loop-short-term-trends-timescale-seconds-hour">5. Anticipation loop — short-term trends (timescale: seconds → hour)</h2>
+<p>Prose: when nobody is engaging, the light does not wander randomly. It continually
+<em>forecasts</em> the next minute-to-hour from the database and pre-positions/energises
+itself, so it is already &quot;leaning toward&quot; arriving traffic.</p>
+<p><strong>◧ Figure A5 — nested time windows feeding three influence signals:</strong></p>
+<p><img src="diagrams/png/A5_trend_windows.png" alt="A5 — Trend windows (1/5/30/60 min) folded into activity_anticipation, flow_momentum, energy_level, weighted by idle_trend_weight" /></p>
+<p>Plus two faster sub-systems:</p>
+<ul>
+<li><strong>Flow tracker</strong> (<code>FlowState</code>, <a href="light_behavior.py">light_behavior.py:170</a>) —
+dominant walk direction over a <strong>30 s window</strong>, updated every <strong>1.5 s</strong>, EMA α=0.25.
+Drives wander-box bias, triggers FLOW mode, and (V6.5c) biases wander <strong>targets</strong>
+toward incoming traffic (triangular distribution peaking ≤60 % toward arrivals).</li>
+<li><strong>Aggression</strong> (<code>AggressionState</code>, <a href="light_behavior.py">:112</a>) — a 0–1 &quot;attention
+seeking&quot; level that <strong>rises when ignored, falls when engaged</strong>, and is <strong>capped by
+hour of day</strong> (<code>AGGRESSION_TIME_CAPS</code>) to suit a financial-district site (near-zero
+at night, peak at lunch).</li>
+</ul>
+<p><strong>◧ Figure A6 — aggression as a tank</strong>: inflow = &quot;ignored time + passers-by who don't
+stop&quot;, outflow = &quot;engagement&quot;, with a ceiling valve labelled &quot;time-of-day cap (hourly
+curve).&quot;</p>
+<p><img src="diagrams/png/A6_aggression_tank.png" alt="A6 — Aggression modelled as a tank: filled by being ignored, drained by engagement, capped by an hourly time-of-day ceiling" /></p>
+<hr />
+<h2 id="6-self-tuning-loop-the-interaction-budget-timescale-hours-days">6. Self-tuning loop + the interaction budget (timescale: hours → days)</h2>
+<p>This is the conceptual heart and the best candidate for a feedback-loop diagram.</p>
+<h3 id="6a-schedule-be-precise-in-captions">6a. Schedule (be precise in captions)</h3>
+<ul>
+<li><strong>Meta-review retuning: 3×/day</strong> — <code>autotune-meta-review.timer</code> at <strong>06:00 / 14:00 /
+22:00</strong>, 8-hour analysis window.</li>
+<li><strong>Daily report + daily learning: midnight (00:15) + 06:00 catch-up.</strong></li>
+<li>So <strong>four scheduled DB analyses per day total</strong>, but the <em>trend-driven personality
+retuning</em> is <strong>3×</strong>. (If your text says &quot;four times a day,&quot; it's the count of all
+scheduled passes; the retuning specifically is three.)</li>
+</ul>
+<h3 id="6b-the-friction-interaction-budget">6b. The friction: interaction budget</h3>
+<p>Prose: every adjustment the tuner makes <strong>spends budget</strong>; budget <strong>refills slowly</strong>;
+when it runs low, changes are <strong>throttled</strong>. This is the friction that prevents the
+light from chasing noisy, second-to-second signals — it can make a few meaningful moves,
+then must &quot;earn back&quot; the right to keep changing.
+(<code>SmartAutoTuner</code>, <a href="V6Dev/smart_autotuner.py">V6Dev/smart_autotuner.py:607</a>.)</p>
+<p><strong>◧ Figure A8 — the budget mechanism:</strong></p>
+<p><img src="diagrams/png/A8_budget_mechanism.png" alt="A8 — Interaction budget: spend = Σ|Δ| × cost_scale depletes it, refill = max / restore_seconds replenishes it; over-budget changes are throttled" /></p>
+<h3 id="6c-the-full-self-tuning-feedback-diagram">6c. The full self-tuning feedback diagram</h3>
+<p><strong>◧ Figure A7 — closed loop. The clever bit: the budget is itself re-tuned by the
+review.</strong> Each node is expanded in §6c-i (A7.1–A7.7).</p>
+<p><img src="diagrams/png/A7_self_tuning_feedback.png" alt="A7 — Self-tuning feedback loop: PUSH (live signal) into the tuner, RESIST (budget + reversion + caps), logged to the DB, re-governed by the 3×/day meta-review" /></p>
+<p><strong>Three forces to label in the figure:</strong> <strong>PUSH</strong> (live signal wants change),
+<strong>RESIST</strong> (budget + mean-reversion toward &quot;home&quot; + hard caps), and <strong>META</strong> (the
+3×/day review adjusts how hard each side pushes). Balance of the three = &quot;alive but not
+frantic, 24/7.&quot;</p>
+<p>Self-diagnoses the review can reach (<code>diagnose()</code>,
+<a href="autotune_meta_review.py">autotune_meta_review.py:334</a>): parameters floor/ceiling-stuck</p>
+<blockquote>
+<p>80 %, activity implausibly low (night/sensor fault), mode starvation (&lt;1 % engaged →
+raise floors), over-reaction (&gt;30 % engaged → lower home), static parameters → raise
+curiosity, and budget always-full/depleted/throttling → tighten or loosen.</p>
+</blockquote>
+<h3 id="6c-i-a7-exploded-each-node-is-its-own-process-a7-1-a7-7">6c-i. A7 exploded — each node is its own process (A7.1–A7.7)</h3>
+<p>The feedback diagram above is the overview; each of its seven nodes hides a real process
+worth one sub-figure. These are rendered in <code>diagrams/</code> and read as a click-through tour
+of a single trip around the loop.</p>
+<table>
+<thead>
+<tr>
+<th>Sub-fig</th>
+<th>Node</th>
+<th>What it shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A7.1</strong> <code>A7_1_push_signal</code></td>
+<td><strong>PUSH</strong></td>
+<td>live presence + trends → a <code>behavior_status</code> dict and a smoothed <em>engagement score</em> (the fitness signal)</td>
+</tr>
+<tr>
+<td><strong>A7.2</strong> <code>A7_2_tuner_pipeline</code></td>
+<td><strong>TUNER</strong></td>
+<td>full <code>SmartAutoTuner.update()</code> cycle: gate (~8 s) → restore budget → score → gradient sample → estimate gradients → deltas (gradient + regime rules + damping) → curiosity → <strong>RESIST</strong> → apply</td>
+</tr>
+<tr>
+<td><strong>A7.3</strong> <code>A7_3_resist_forces</code></td>
+<td><strong>RESIST</strong></td>
+<td>the 4-stage friction stack: mean-reversion → step clamp → budget → value clamp</td>
+</tr>
+<tr>
+<td><strong>A7.3b</strong> <code>A7_3b_resist_worked_example</code></td>
+<td><strong>RESIST, worked</strong></td>
+<td>one +0.050 nudge to <code>energy</code> whittled to ~0.012 (ample budget) or ~0.006 (throttled)</td>
+</tr>
+<tr>
+<td><strong>A7.4</strong> <code>A7_4_metaparams_state</code></td>
+<td><strong>meta-params</strong></td>
+<td>the 12-value state with ranges/floors, kept in sync with GUI sliders, read by BehaviorSystem</td>
+</tr>
+<tr>
+<td><strong>A7.5</strong> <code>A7_5_adjustments_record</code></td>
+<td><strong>behavior_adjustments</strong></td>
+<td>the row logged each cycle (old/new, deltas, gradients, budget before/after/cost) + its producer/consumers</td>
+</tr>
+<tr>
+<td><strong>A7.6</strong> <code>A7_6_light_output</code></td>
+<td><strong>light output</strong></td>
+<td>meta-params → modulation chain → Art-Net (the bridge into the C-series)</td>
+</tr>
+<tr>
+<td><strong>A7.7</strong> <code>A7_7_metareview_pipeline</code></td>
+<td><strong>meta-review</strong></td>
+<td>read 8 h → <code>diagnose()</code> → <code>compute_adjustments()</code> (≤25 changes) → write overrides → log audit</td>
+</tr>
+</tbody>
+</table>
+<p><strong>◧ Figure A7.3b — worked friction example, the figure that <em>shows</em> the friction rather
+than naming it.</strong> Trace one proposed <code>energy</code> change through the stack (constants are the
+V6.5c defaults; the +0.050 input and budget levels are illustrative):</p>
+<p><img src="diagrams/png/A7_3b_resist_worked_example.png" alt="A7.3b — A proposed +0.050 nudge to energy whittled through mean-reversion, step clamp, budget, and value clamp to ~0.012 (or ~0.006 when throttled)" /></p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Operation</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>proposed (gradient + regime)</td>
+<td>—</td>
+<td>+0.050</td>
+</tr>
+<tr>
+<td>1. mean reversion toward home (0.45)</td>
+<td>+ (−0.0037)</td>
+<td>+0.0463</td>
+</tr>
+<tr>
+<td>2. step clamp (personality cap ±0.012)</td>
+<td>clamp</td>
+<td><strong>+0.012</strong></td>
+</tr>
+<tr>
+<td>3. budget (cost = 0.012 × 30 = 0.36)</td>
+<td>pay if ample / scale if low</td>
+<td>+0.012 <strong>or</strong> +0.006</td>
+</tr>
+<tr>
+<td>4. value clamp (range 0–0.80, floor 0.25)</td>
+<td>within bounds</td>
+<td>applied <strong>0.620 → 0.632</strong></td>
+</tr>
+</tbody>
+</table>
+<p><em>Friction turned a 0.050 grab into a ~0.012 step</em> — the &quot;deliberate, not twitchy&quot;
+argument, demonstrated. (Math verified against <code>SmartAutoTuner.update</code>,
+<a href="lightController_osc.py">lightController_osc.py:1886</a> and
+<a href="V6Dev/smart_autotuner.py">smart_autotuner.py</a>.)</p>
+<h3 id="6d-daily-learning-separate-gentler">6d. Daily learning (separate, gentler)</h3>
+<p>At midnight the controller computes a <strong>7-day weighted average of engagement by
+time-of-day</strong> and <strong>blends ~30 %</strong> into the next day's starting personality
+(<code>on_daily_report</code>, <a href="V6Dev/v6_integration.py">V6Dev/v6_integration.py:407</a>) — so the
+light gradually learns &quot;what worked at 9am vs 9pm.&quot;</p>
+<hr />
+<h2 id="7-continuous-self-analysis-anti-repetition">7. Continuous self-analysis (anti-repetition)</h2>
+<p>The light also studies <em>its own</em> output to avoid getting stale — the explicit design
+goal of &quot;evolution, not just reaction.&quot;</p>
+<p><strong>◧ DRAW — a small &quot;mirror&quot; loop: light → records own state → reads it back → varies.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Source</th>
+<th>Triggers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>position entropy (1 h)</td>
+<td><code>get_position_entropy</code> (<a href="tracking_database.py">tracking_database.py:846</a>)</td>
+<td>low ⟶ bias to unexplored space</td>
+</tr>
+<tr>
+<td>response similarity (24 h)</td>
+<td><code>get_response_similarity</code> (<a href="tracking_database.py">:936</a>)</td>
+<td>high ⟶ force more variety</td>
+</tr>
+<tr>
+<td>mode distribution (24 h)</td>
+<td><code>get_mode_distribution</code></td>
+<td>balance check</td>
+</tr>
+<tr>
+<td>position cooldown (30 s)</td>
+<td><code>is_position_recently_visited</code></td>
+<td>don't revisit a spot</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-the-database-memory-of-the-installation">8. The database — memory of the installation</h2>
+<p>One <strong>SQLite</strong> file (<code>tracking_history.db</code>, WAL mode, batched commits), serving three
+masters at once: <strong>live behaviour</strong>, <strong>trend analysis</strong>, and <strong>public reports</strong>. Data is
+<strong>tiered</strong> — raw events live ~48 h, aggregates live forever — so the file stays fast for
+years while keeping permanent history.</p>
+<p><strong>◧ Figure B1 — a tiered/funnel diagram: raw (48h) → hourly (∞) → daily (∞), with side
+tables for the light's own behaviour and its tuning audit.</strong></p>
+<p><img src="diagrams/png/B1_db_funnel.png" alt="B1 — Tiered database: raw tracking_events / light_behavior / behavior_adjustments (48 h) roll up to hourly_stats and daily_stats_v2 / learnings / reviews kept forever" /></p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Stores</th>
+<th>Why</th>
+<th>Keep</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tracking_events</code></td>
+<td>person x/z, velocity, <strong>zone</strong>, <strong>flow_direction</strong></td>
+<td>raw interaction record; source of all trend queries</td>
+<td>48 h</td>
+</tr>
+<tr>
+<td><code>light_behavior</code></td>
+<td>light's own mode/position/brightness/gesture</td>
+<td>self-analysis (anti-repetition)</td>
+<td>48 h</td>
+</tr>
+<tr>
+<td><code>behavior_adjustments</code></td>
+<td>every tuning Δ + activity + <strong>budget before/after/cost</strong></td>
+<td>audit the tuner reads</td>
+<td>48 h</td>
+</tr>
+<tr>
+<td><code>person_sessions</code></td>
+<td>visit start/end/duration, zone, flow</td>
+<td>dwell/conversion</td>
+<td>48 h</td>
+</tr>
+<tr>
+<td><code>hourly_stats</code></td>
+<td>per-hour rollup</td>
+<td>permanent trend history</td>
+<td>∞</td>
+</tr>
+<tr>
+<td><code>daily_stats_v2</code></td>
+<td>per-day rollup (peak/quiet, flow balance)</td>
+<td>day-over-day trends</td>
+<td>∞</td>
+</tr>
+<tr>
+<td><code>autotune_daily_learnings</code></td>
+<td>optimal values, param journeys, strategy</td>
+<td>next-day blending</td>
+<td>∞</td>
+</tr>
+<tr>
+<td><code>meta_tuning_reviews</code></td>
+<td>diagnosis, old→new config, recommendations</td>
+<td>transparent/reversible tuning</td>
+<td>∞</td>
+</tr>
+</tbody>
+</table>
+<p>Two fields are computed <em>on ingest</em> so trend queries stay cheap: <strong>zone</strong>
+(active/passive/unknown) and <strong>flow_direction</strong> (L→R / R→L / stationary).</p>
+<hr />
+<h2 id="9-real-time-ingestion-the-sensing-front-end">9. Real-time ingestion (the sensing front-end)</h2>
+<p><strong>◧ Figure A10 — camera → YOLO → floor projection → fusion → OSC → controller.</strong></p>
+<p><img src="diagrams/png/A10_ingestion.png" alt="A10 — Real-time ingestion: 2 RTSP cameras → batched YOLO → ArUco floor projection → fusion → OSC :7000 → controller zone-classify + DB write → Art-Net" /></p>
+<p>The camera-to-floor mapping is solved from printed <strong>ArUco fiducial markers</strong> placed at
+known positions in the space (P6); detecting them gives the homography/pose that turns
+pixel coordinates into real-world floor positions.</p>
+<p><img src="diagrams/assets/P6_aruco_marker.png" alt="P6 — An ArUco fiducial marker from the calibration set, used to register camera pixels to real-world floor coordinates" /></p>
+<p>A single pedestrian step becomes, within ~40 ms: a light reaction, a DB row, and a
+WebSocket frame. Light output leaves over <strong>Art-Net/UDP :6454</strong> as per-panel DMX from a
+distance-falloff model.</p>
+<p><strong>◧ Figure B3 — the spatial plan (this is a strong architectural figure):</strong> panels along
+the storefront; <strong>active zone</strong> (engaging) close in; <strong>passive zone</strong> (sidewalk traffic)
+beyond it; two cameras angled inward; ArUco markers. Coordinates in cm, X along the
+panels, Z out toward the street.</p>
+<p><img src="diagrams/png/B3_spatial_plan.png" alt="B3 — Installation plan to scale (cm): 4 panel units, two inward-angled cameras, ArUco markers, and the active/passive tracking zones" /></p>
+<p><em>(B3 is pinned to real centimetre coordinates, so the subway-wall marker sits far up-frame;
+treat it as a scale reference and redraw with filled zone rectangles for the final poster.)</em></p>
+<hr />
+<h2 id="10-web-interface-two-data-planes">10. Web interface — two data planes</h2>
+<p>Prose: the public viewer separates &quot;what the light is doing <em>right now</em>&quot; from &quot;what
+happened <em>over time</em>.&quot; Live state streams over WebSocket; long-term trends are
+pre-computed server-side and published as static JSON — the browser never touches the
+database or does heavy maths.</p>
+<p><strong>◧ Figure A11 — two parallel pipes from controller to browser:</strong></p>
+<p><img src="diagrams/png/A11_web_two_planes.png" alt="A11 — Two web planes: an immediate WebSocket stream (~15 fps live state) and a nightly static-JSON trends plane published to GitHub Pages" /></p>
+<table>
+<thead>
+<tr>
+<th>Plane</th>
+<th>Transport</th>
+<th>Cadence</th>
+<th>Content</th>
+<th>Computed where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Immediate</td>
+<td>WebSocket :8765</td>
+<td>~15 fps</td>
+<td>live light/people/mode/status</td>
+<td>controller, sent as-is</td>
+</tr>
+<tr>
+<td>Trends</td>
+<td>static JSON over HTTPS</td>
+<td>nightly</td>
+<td>hourly curves, peak/quiet, flow balance, mode mix, tuning summary</td>
+<td>SQLite (server-side)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-suggested-figure-set-minimal-high-impact">11. Suggested figure set (minimal, high-impact)</h2>
+<p>For a 10-image Projects submission, this sequence tells the whole story — now ending on
+the complexity→12-values collapse, which is the strongest single idea to leave a reviewer
+with. (Diagram IDs in <code>diagrams/</code>.)</p>
+<ol>
+<li><strong>Spatial plan</strong> — cameras, zones, panels, light (§9 / <code>B3</code>).</li>
+<li><strong>Top-level pipeline</strong> — the three processes + two channels (§1 / <code>A1</code>).</li>
+<li><strong>Three nested loops</strong> — the conceptual core (§2 / <code>A2</code>).</li>
+<li><strong>Mode state machine</strong> — reaction layer (§4 / <code>A3</code>).</li>
+<li><strong>Personality radar</strong> — neutral vs as-deployed meta-parameters (§3a).</li>
+<li><strong>Self-tuning feedback w/ budget</strong> — PUSH vs RESIST vs META (§6c / <code>A7</code>).</li>
+<li><strong>Worked friction example</strong> — a nudge whittled by the budget (§6c-i / <code>A7.3b</code>).</li>
+<li><strong>Trend windows → influences</strong> — anticipation layer (§5 / <code>A5</code>).</li>
+<li><strong>The output funnel</strong> — many → ~9-value light state → 12 panel bytes (§3d / <strong><code>C1</code></strong>).</li>
+<li><strong>Per-panel falloff math + 12-channel map</strong> — the final collapse to the wire
+(§3f / <strong><code>C3</code> + <code>C4</code></strong>, paired).</li>
+</ol>
+<p>This ordering opens with <em>place</em> (1) and closes with <em>the irreducible output</em> (9–10),
+so the narrative arc is &quot;a corner of a city → an adaptive temperament → twelve numbers.&quot;
+If you can only spare one figure for the output story, use <strong>C1</strong>; if two, pair <strong>C1</strong>
+with <strong>C3</strong>. The A7.x and remaining C figures (C2, C5) are excellent for the talk/poster
+where you have room beyond the 10-image cap.</p>
+<hr />
+<h2 id="12-how-this-relates-to-the-acadia-2026-brief-humanism-recoded-projects">12. How this relates to the ACADIA 2026 brief — <em>Humanism Recoded</em> (Projects)</h2>
+<blockquote>
+<p><strong>Verified call details</strong> (ACADIA 2026, <a href="https://2026.acadia.org/call-for-papers">call for submissions</a>):
+theme <strong>&quot;Humanism Recoded: Reframing Computation and Making through Embodiment and
+Culture&quot;</strong>; <strong>Detroit / Lawrence Technological University, Oct 22–24, 2026</strong>.
+<strong>Projects</strong> = <em>&quot;600-word text (excluding citations and captions) plus a maximum of 10
+images,&quot;</em> blind peer-reviewed, published in the proceedings (CumInCAD, DOI) and
+<em>&quot;exhibited as posters in the Exhibition.&quot;</em> Projects should present <em>&quot;built work,
+speculative prototypes, installations, or experimental workflows demonstrating the
+integration of computational tools with material, cultural, or social contexts.&quot;</em>
+Projects deadline: <strong>June 1, 2026</strong> (final extension). Of the 12 subthemes, the two
+most relevant here are <strong>&quot;Embodied Codes&quot;</strong> (<em>&quot;computation situated in bodies,
+practices, and local contexts&quot;</em>) and <strong>&quot;Machines that Care&quot;</strong> (<em>&quot;robotics and
+autonomous systems reimagined as partners in repair, care, and cultural making&quot;</em>).</p>
+</blockquote>
+<p>ACADIA 2026, <strong>&quot;Humanism Recoded: Reframing Computation and Making through Embodiment
+and Culture,&quot;</strong> reframes computation around human values, bodies and cultural practice
+rather than abstracting it away from them — and its <strong>Projects</strong> category invites
+<em>&quot;built work, speculative prototypes, installations, or experimental workflows
+demonstrating the integration of computational tools with material, cultural, or social
+contexts.&quot;</em> Drop Ceiling answers that directly: it is a <em>built, public, 24/7</em> architectural light
+installation whose computation is literally <em>embodied</em> in a storefront and <em>encultured</em>
+by its site. The system does not run a fixed program; it senses the embodied rhythms of
+a specific Toronto financial-district sidewalk — commute surges, lunch crowds, the dead
+of night — and <strong>recodes its own behaviour around them</strong>, learning over days which
+character &quot;works&quot; at which hour. The interaction budget is the conceptual hinge for the
+brief: rather than maximising responsiveness, the project deliberately introduces
+<em>friction</em>, treating restraint and slowness as humane design values and resisting the
+extractive logic of an always-optimising machine. In this sense the light behaves less
+like a sensor-actuator and more like an inhabitant that adapts to its neighbours.</p>
+<p>Within the Projects category specifically, the contribution is an <strong>experimental
+authoring workflow for adaptive environments</strong>: a transparent, three-loop architecture
+(instant reaction, hourly anticipation, multi-day self-tuning) in which a small set of
+human-legible &quot;personality&quot; meta-parameters — responsiveness, energy, sociability,
+exploration, memory — are continuously, accountably retuned from the installation's own
+interaction history, with every decision logged and even re-published to the public as a
+daily report. This speaks to the <strong>&quot;Machines that Care&quot;</strong> and <strong>&quot;Embodied Codes&quot;</strong>
+subthemes: an autonomous system reframed not as a controller to be optimised but as a
+cultural participant that watches, remembers, hesitates, and grows a character in
+dialogue with the people who pass beneath it. The project's value to the ACADIA audience
+is methodological as much as aesthetic — it demonstrates how trend analysis, budgeted
+self-modification, and self-analysis can be composed into an adaptive architecture that
+remains interpretable and authorable by a designer rather than opaque.</p>
+<hr />
+<p><em>Sources for the conference framing:
+<a href="https://2026.acadia.org/call-for-papers">ACADIA 2026 Call for Submissions</a> and the
+<a href="https://easychair.org/cfp/acadia2026">EasyChair CFP</a>. All system facts trace to the
+V6.5c source under <code>dc-dev/IO/</code>.</em></p>
+<hr />
+<h2 id="13-draft-600-word-projects-submission-text">13. Draft 600-word Projects submission text</h2>
+<p><em>Ready-to-submit draft body — <strong>599 words</strong> (the call allows 600, excluding citations and
+captions). Now closes on the complexity→12-values collapse (§3d–§3f). Everything above is
+reference/diagram material; this is the actual proposed text. Slot project title, authors
+and image captions around it. ~1 word of headroom, so any addition needs a matching cut.</em></p>
+<blockquote>
+<p>Drop Ceiling is a permanent, public light installation in a downtown Toronto storefront:
+a single luminous point drifts through a field of LED panels behind the glass while, on
+the sidewalk outside, two cameras quietly watch the people passing by. It is not a motion
+sensor that flashes on contact, but a system designed to behave like an inhabitant of its
+corner — one that reacts in the moment, anticipates the rhythms of the street, and slowly
+grows a character of its own over weeks of operation.</p>
+<p>Computationally, the work is organised as three nested control loops running at three
+timescales. The innermost loop, at thirty frames per second, drives reaction: a
+behaviour state machine (idle, flow, aware, engaged, crowd) follows whoever is present,
+layering sixteen small gestures — a nod, a lean, a slow shared &quot;breathing&quot; — that deepen
+the longer a person stays. The middle loop, at seconds-to-minutes, drives
+anticipation: the system reads pedestrian trends across nested one-, five-, thirty- and
+sixty-minute windows, plus a thirty-second flow tracker, and biases where and how
+energetically the light idles so that it leans toward arriving foot traffic rather than
+waiting to be triggered. The outermost loop, spanning days, drives self-tuning.</p>
+<p>That self-tuning is the conceptual core. The light's expression is governed by a small
+set of human-legible meta-parameters — responsiveness, energy, sociability, exploration,
+memory, and a handful of output multipliers — that colour how each behaviour mode
+becomes movement, brightness, and pulse. Three times a day the system analyses its own
+interaction database, diagnoses pathologies in its recent behaviour (parameters stuck at
+limits, modes starved, responses gone static), and rewrites its own tuning
+configuration, which the running light hot-reloads within seconds. Every decision is
+logged, and a nightly report republishes the day's patterns to a public web view.</p>
+<p>Crucially, the system does not simply maximise responsiveness. An interaction budget
+meters how much the tuner may change per unit of time: every adjustment spends budget,
+budget refills slowly, and when it runs low further change is throttled. This deliberate
+friction — reinforced by mean-reversion toward &quot;home&quot; values and the daily review's
+ability to retune the budget itself — keeps adaptation slow and intentional rather than
+twitchy. The result reads less like an optimising machine and more like a temperament:
+the light can be eager or reserved, brisk or contemplative, and it earns the right to
+change.</p>
+<p>For all this apparatus, the output is radically simple. Thirty times a second the entire
+system collapses to the state of one virtual point light, read by the ceiling as just
+twelve numbers — one brightness value per panel, set purely by distance from the light
+through a shaped, steerable falloff. That gap, between a city-corner's worth of context
+and twelve bytes on a wire, is where the work locates its meaning.</p>
+<p>Drop Ceiling addresses Humanism Recoded by situating computation in a body and a place.
+Its intelligence is not abstracted onto a screen but embodied in a storefront and
+encultured by a specific site, whose commute surges, lunch crowds, and dead-of-night
+quiet it learns and answers. The project speaks directly to the Embodied Codes and
+Machines that Care subthemes: an autonomous system reframed not as a controller to be
+optimised but as a cultural participant that watches, remembers, hesitates, and grows a
+character in dialogue with the people beneath it. Its contribution to the Projects track
+is as much methodological as aesthetic — an authoring approach for adaptive environments
+in which a designer shapes a few interpretable personality parameters and lets the
+installation retune them, accountably, from its lived experience of the street.</p>
+</blockquote>
+<hr />
+<h2 id="14-glossary">14. Glossary</h2>
+<p>The document uses two overlapping vocabularies: concrete <strong>software parameters</strong> (actual
+variables in the V6.5c code) and the <strong>interaction concepts</strong> they implement. They appear
+scattered through the sections and diagrams; this is the single reference. A recurring
+source of confusion — flagged here once — is the word <strong>&quot;personality&quot;</strong>: it is <em>not</em> a
+variable, but the informal name for the set of 12 tunable meta-parameters (§14.1) taken
+together. When A2 says Loop 3 &quot;reshapes the personality,&quot; it means the self-tuner is
+slowly moving those 12 numbers.</p>
+<h3 id="14-1-software-parameters-the-12-tunable-meta-parameters">14.1 Software parameters — the 12 tunable meta-parameters</h3>
+<p>The variables the self-tuning loop is allowed to move (the &quot;personality&quot;). Defined in
+<code>MetaParameters</code> (<code>light_behavior.py:429</code>); live values persist in <code>slider_settings.json</code>;
+ranges/floors/caps live in <code>autotune_overrides.json</code> and <code>smart_autotuner.py</code>. Split into
+two groups by how the tuner treats them.</p>
+<p><strong>Personality axes</strong> (0.0–1.0; rise with activity):</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Plain meaning</th>
+<th>Bends these light outputs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>responsiveness</code></td>
+<td>how quickly it reacts</td>
+<td>follow-smoothing, move speed, transition durations</td>
+</tr>
+<tr>
+<td><code>energy</code></td>
+<td>overall liveliness</td>
+<td>pulse rate, max brightness, gesture frequency</td>
+</tr>
+<tr>
+<td><code>attention_span</code></td>
+<td>how long it stays focused on one person</td>
+<td>follow-smoothing, dwell rewards, mode stickiness</td>
+</tr>
+<tr>
+<td><code>sociability</code></td>
+<td>eagerness to engage</td>
+<td>gesture chance, entrance flash, engaged brightness</td>
+</tr>
+<tr>
+<td><code>exploration</code></td>
+<td>appetite to wander/visit new space</td>
+<td>wander-box size, wander interval, position variety</td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td>how strongly the past suppresses repeats</td>
+<td>anti-repetition strength, trend-influence weight</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output multipliers</strong> (scale the physical outputs; inverse-adjusted by the tuner):</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>brightness_global</code></td>
+<td>master brightness gain</td>
+</tr>
+<tr>
+<td><code>speed_global</code></td>
+<td>master movement-speed gain</td>
+</tr>
+<tr>
+<td><code>pulse_global</code></td>
+<td>master pulse/breathing-rate gain</td>
+</tr>
+<tr>
+<td><code>follow_speed_global</code></td>
+<td>how fast it chases a tracked person</td>
+</tr>
+<tr>
+<td><code>dwell_influence</code></td>
+<td>how strongly dwell-time bonuses apply (0 = off, 2 = double)</td>
+</tr>
+<tr>
+<td><code>idle_trend_weight</code></td>
+<td>how strongly passive-zone trends bend idle behaviour</td>
+</tr>
+</tbody>
+</table>
+<p><em>(Three further multipliers exist in the dataclass — <code>trend_weight</code>, <code>time_of_day_weight</code>,
+<code>anti_repetition_weight</code> — but are not actively retuned by the V6 autotuner.)</em></p>
+<h3 id="14-2-software-parameters-the-light-state-the-quot-pinch-point-quot">14.2 Software parameters — the light state (the &quot;pinch point&quot;)</h3>
+<p>The ≈9 scalars on the <code>PointLight</code> object that the panels actually read each frame
+(<code>PointLight</code>, <code>lightController_osc.py:2217</code>). Everything in §14.1 exists to set these.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>position</code> [x, y, z]</td>
+<td>the light emitter's location in the panel field (cm)</td>
+</tr>
+<tr>
+<td><code>current_brightness</code></td>
+<td>instantaneous intensity = <code>brightness_min + (brightness_max − brightness_min) × (sin(pulse_phase)+1)/2</code></td>
+</tr>
+<tr>
+<td><code>brightness_min</code> / <code>brightness_max</code></td>
+<td>the floor/ceiling the pulse swings between</td>
+</tr>
+<tr>
+<td><code>pulse_speed</code></td>
+<td>ms per breathing cycle (drives <code>pulse_phase</code>)</td>
+</tr>
+<tr>
+<td><code>falloff_radius</code></td>
+<td>distance at which a panel's contribution reaches zero</td>
+</tr>
+<tr>
+<td><code>falloff_scale</code> [sx, sy, sz]</td>
+<td>per-axis stretch of the falloff (anisotropic / ellipsoidal beam)</td>
+</tr>
+<tr>
+<td><code>falloff_rotation</code></td>
+<td>Y-axis rotation of the falloff (lets a gesture steer the beam)</td>
+</tr>
+<tr>
+<td><code>move_speed</code></td>
+<td>how fast <code>position</code> interpolates toward its target</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-3-software-parameters-tuning-amp-friction-constants">14.3 Software parameters — tuning &amp; friction constants</h3>
+<p>Govern <em>how</em> the self-tuner changes §14.1 (<code>smart_autotuner.py</code>, <code>autotune_overrides.json</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>home_values</code></td>
+<td>the per-parameter rest value mean-reversion pulls toward (time-of-day interpolated)</td>
+</tr>
+<tr>
+<td><code>safe_floors</code></td>
+<td>minimums the tuner won't go below (prevents a &quot;zombie&quot; unresponsive light)</td>
+</tr>
+<tr>
+<td><code>caps</code></td>
+<td>soft maximums per parameter (prevents an obnoxious light)</td>
+</tr>
+<tr>
+<td><code>PARAM_RANGES</code></td>
+<td>the absolute min/max bounds for each of the 12 parameters</td>
+</tr>
+<tr>
+<td><code>budget</code> (<code>max</code>, <code>restore_seconds</code>, <code>cost_scale</code>)</td>
+<td>the interaction budget: pool size, refill time, and price per unit of change</td>
+</tr>
+<tr>
+<td><code>reversion</code> (<code>base</code>, <code>progressive</code>)</td>
+<td>mean-reversion strength — constant pull + extra pull when far from home</td>
+</tr>
+<tr>
+<td><code>curiosity</code> (<code>interval</code>, <code>strength</code>)</td>
+<td>periodic small random nudge to keep the parameter space explored</td>
+</tr>
+<tr>
+<td>gradient / engagement score</td>
+<td>the fitness signal the tuner climbs (<code>EngagementScorer</code>); higher = more/better engagement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-4-software-parameters-sensing-amp-spatial">14.4 Software parameters — sensing &amp; spatial</h3>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>active zone</td>
+<td>the near region where presence counts as <em>engaging</em> the installation</td>
+</tr>
+<tr>
+<td>passive zone</td>
+<td>the sidewalk region beyond it; presence counts as <em>passing traffic</em></td>
+</tr>
+<tr>
+<td><code>passive_rate</code></td>
+<td>people per minute in the passive zone — drives the IDLE/FLOW/AWARE tiers</td>
+</tr>
+<tr>
+<td><code>flow_direction</code> / <code>flow_balance</code></td>
+<td>net walking direction, −1 (R→L) … +1 (L→R)</td>
+</tr>
+<tr>
+<td><code>zone</code> / <code>flow_direction</code> (DB)</td>
+<td>fields computed on ingest and stored per <code>tracking_events</code> row</td>
+</tr>
+<tr>
+<td>OSC <code>/tracker/...</code></td>
+<td>the messages carrying live counts and per-person positions into the controller</td>
+</tr>
+<tr>
+<td>Art-Net / DMX</td>
+<td>the protocol/values sent out: 12 channels, one 0–255 brightness per panel</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-5-interaction-concepts-behaviour-vocabulary">14.5 Interaction concepts — behaviour vocabulary</h3>
+<p>The conceptual layer: what the light is <em>doing</em>, named for legibility (in the code, the
+public viewer's status text, and this document).</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>personality</strong></td>
+<td>informal name for the 12 meta-parameters (§14.1) as a set — the light's evolving disposition</td>
+</tr>
+<tr>
+<td><strong>mode</strong></td>
+<td>which of five behaviour states the light is in: <strong>IDLE</strong>, <strong>FLOW</strong>, <strong>AWARE</strong>, <strong>ENGAGED</strong>, <strong>CROWD</strong></td>
+</tr>
+<tr>
+<td><strong>stickiness</strong></td>
+<td>a mode change only commits after its conditions persist for a minimum time (anti-flicker)</td>
+</tr>
+<tr>
+<td><strong>gesture</strong></td>
+<td>a brief, named motion overlaid on the mode (nod, lean, sway, orbit, settle, breathe, bloom, sweep, focus…)</td>
+</tr>
+<tr>
+<td><strong>dwell phase</strong></td>
+<td>how engagement deepens with time-in-zone: <strong>notice</strong> → <strong>greet</strong> → <strong>engage</strong> → <strong>bond</strong></td>
+</tr>
+<tr>
+<td><strong>breathing</strong></td>
+<td>the continuous sinusoidal brightness/scale modulation — the light's visible &quot;rhythm&quot;</td>
+</tr>
+<tr>
+<td><strong>bloom</strong></td>
+<td>a momentary full-panel illumination (a high point during engagement/crowd)</td>
+</tr>
+<tr>
+<td><strong>aggression</strong></td>
+<td>a 0–1 &quot;attention-seeking&quot; level: rises when ignored, falls when engaged, capped by hour of day</td>
+</tr>
+<tr>
+<td><strong>flow</strong></td>
+<td>the real-time dominant walking direction of passive traffic (also the name of a mode)</td>
+</tr>
+<tr>
+<td><strong>almost-engaged</strong></td>
+<td>a passer-by slowing near the active zone — a candidate the light tries to draw in</td>
+</tr>
+<tr>
+<td><strong>proximity</strong></td>
+<td>how close the nearest person is to the panels — makes the light slower/brighter/tighter up close</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-6-interaction-concepts-adaptation-amp-system-vocabulary">14.6 Interaction concepts — adaptation &amp; system vocabulary</h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>the three loops</strong></td>
+<td>reaction (~30 Hz), anticipation (sec–hours), self-tuning (hours–days) — see §2 / A2</td>
+</tr>
+<tr>
+<td><strong>PUSH / RESIST / META</strong></td>
+<td>the three forces on the parameters: live signal <em>pushes</em> change, friction <em>resists</em> it, the meta-review <em>re-governs</em> how hard each acts (A7)</td>
+</tr>
+<tr>
+<td><strong>interaction budget</strong></td>
+<td>the <em>friction</em>: a metered allowance that makes self-adaptation deliberate rather than twitchy</td>
+</tr>
+<tr>
+<td><strong>mean-reversion</strong></td>
+<td>the steady pull of every parameter back toward its <code>home_value</code></td>
+</tr>
+<tr>
+<td><strong>curiosity</strong></td>
+<td>the deliberate small random exploration of the parameter space</td>
+</tr>
+<tr>
+<td><strong>meta-review</strong></td>
+<td>the deep 8-hour analysis run 3×/day that diagnoses and rewrites the tuning constants (§14.3)</td>
+</tr>
+<tr>
+<td><strong>daily learning</strong></td>
+<td>the midnight blend of a 7-day, time-of-day engagement average into the next day's starting personality</td>
+</tr>
+<tr>
+<td><strong>self-analysis</strong></td>
+<td>the light reading its <em>own</em> recorded behaviour to avoid repetition (position entropy, response similarity)</td>
+</tr>
+<tr>
+<td><strong>regime</strong></td>
+<td>predicted traffic context — dead / trickle / steady / rush / event — used to vary tuning aggressiveness</td>
+</tr>
+<tr>
+<td><strong>trend window</strong></td>
+<td>one of the nested look-back periods (1 / 5 / 30 / 60 min) the anticipation loop reads</td>
+</tr>
+<tr>
+<td><strong>engagement</strong></td>
+<td>a person entering the active zone; the event the whole system is implicitly optimising toward</td>
+</tr>
+<tr>
+<td><strong>the pinch point</strong></td>
+<td>the moment all complexity collapses to the ≈9-value light state before fanning out to 12 panel values (§3d, C1)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="15-conceptual-goals-the-software-system-synthesis-for-the-submission">15. Conceptual goals × the software system — synthesis for the submission</h2>
+<p><em>This section bridges two documents: the project's <strong>conceptual writing</strong> (the
+<code>DropCeiling-overview</code> text — open-source intent, light-as-character, AI-agent
+development, measurable evolution) and the <strong>technical system</strong> anatomised in §1–§14. The
+software sections above answer &quot;how does it work&quot;; this section answers &quot;why does the way
+it works matter,&quot; and proposes how to assemble both into the 600-word ACADIA Projects
+submission and its 10 figures. Everything here is a <strong>proposal to react to</strong>, not settled
+text.</em></p>
+<blockquote>
+<p><strong>Two reconciliations to make before submitting</strong> (places where the overview and the
+code currently diverge — pick one and make the doc consistent):</p>
+<ol>
+<li><strong>Control protocol.</strong> The overview says panels are driven over the <strong>open 0–10V
+protocol</strong>; the V6.5c code sends <strong>Art-Net/DMX</strong> (<code>StupidArtnet</code>, universe 0). Likely
+both are true (Art-Net → a DMX/0–10V converter at the fixtures), but the submission
+should state the actual signal path in one sentence. <em>The &quot;12 values&quot; story (C-series)
+is unaffected — it's 12 per-panel intensities either way.</em></li>
+<li><strong>Site framing.</strong> The overview is site-specific (Haworth showroom, 55 University Ave,
+the column &quot;alcove,&quot; DesignTO). Earlier draft text here said &quot;financial district&quot;
+generically. Use the real site; the alcove-between-columns detail is a <em>gift</em> — it is
+the physical reason the active/passive zone split exists (§14.4).</li>
+<li><strong>Run length.</strong> Both source documents predate the final run. The installation
+ultimately ran <strong>24 hours a day for 54 days</strong>, taking in <strong>~1 million inputs from
+unique active and passive visitors</strong>. Update any &quot;until March 10 / seven weeks /
+day-25&quot; phrasing to the final figures.</li>
+</ol>
+</blockquote>
+<h3 id="15-0-scale-the-number-that-makes-the-rest-credible">15-0. Scale — the number that makes the rest credible</h3>
+<p><em>Lead with this; it changes how every other claim in the submission is read.</em> The
+installation ran <strong>continuously, 24/7, for 54 days</strong>, and over that time ingested
+<strong>~1,000,000 inputs from unique active and passive visitors</strong> on the sidewalk. (The raw
+position-event stream behind those visitors is larger still — each visitor produces many
+position samples as they cross the field.)</p>
+<p><strong>Run at a glance (estimated).</strong> The full database is not accessible at writing; the
+figures below are <strong>extrapolated from 34 days of surviving daily reports</strong>, which show
+very stable, repeatable day/week patterns (weekday commute peaks, quiet nights, lighter
+weekends). Per-day averages from those reports are scaled to the full 54-day run.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th style="text-align:right">Per day (observed avg)</th>
+<th style="text-align:right">Over 54 days (est.)</th>
+<th>Basis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tracking events (raw position samples)</td>
+<td style="text-align:right">~275,000</td>
+<td style="text-align:right"><strong>~15 million</strong></td>
+<td>mean of 34 daily reports (median ~265k/day)</td>
+</tr>
+<tr>
+<td>Unique visitors (active + passive)</td>
+<td style="text-align:right">~18,500</td>
+<td style="text-align:right"><strong>~1 million</strong></td>
+<td>back-calculated from the stated ~1M total</td>
+</tr>
+<tr>
+<td>Short-term evaluations (autotuner cycle, ~8 s)</td>
+<td style="text-align:right">~10,800</td>
+<td style="text-align:right"><strong>~580,000</strong></td>
+<td><code>SmartAutoTuner</code> update interval</td>
+</tr>
+<tr>
+<td>Flow-tracker updates (~1.5 s)</td>
+<td style="text-align:right">~57,600</td>
+<td style="text-align:right"><strong>~3.1 million</strong></td>
+<td><code>FlowState</code>, anticipation loop</td>
+</tr>
+<tr>
+<td>Long-term evaluations (meta-review, 3×/day)</td>
+<td style="text-align:right">3</td>
+<td style="text-align:right"><strong>162</strong></td>
+<td><code>autotune-meta-review.timer</code></td>
+</tr>
+<tr>
+<td>Daily-learning cycles (midnight)</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right"><strong>54</strong></td>
+<td><code>DailyReportScheduler</code> + V6 <code>on_daily_report</code></td>
+</tr>
+</tbody>
+</table>
+<p><em>Rounded, illustrative. &quot;Short-term evaluations&quot; = per-cycle parameter retunes; &quot;long-term
+evaluations&quot; = the deep 8-hour database reviews. Numbers are deliberately conservative —
+state them as approximate (&quot;~&quot;, &quot;roughly&quot;) in the submission.</em></p>
+<p><strong>◧ Figure D1 — run totals over 54 days</strong> (the same table as a log-scale ladder; good as a
+single &quot;scale&quot; slide):</p>
+<p><img src="diagrams/png/D1_run_totals.png" alt="D1 — Estimated Drop Ceiling run totals over 54 days: ~15M tracking events, ~3.1M flow updates, ~1M visitors, ~580K short-term evaluations, 162 meta-reviews, 54 daily-learning cycles" /></p>
+<p><strong>◧ Figure D2 — fast vs slow</strong> (the friction argument as a picture: tens of thousands of
+fast adjustments a day, governed by a handful of slow reviews):</p>
+<p><img src="diagrams/png/D2_eval_cadence.png" alt="D2 — Evaluations per day on a log scale: flow updates ~57,600 and short-term evals ~10,800 (fast) versus 3 meta-reviews and 1 daily-learning cycle (slow)" /></p>
+<p><em>(Both rendered by <code>diagrams/src/D_scale_charts.py</code> via matplotlib; re-run to update if the
+final database yields hard totals.)</em></p>
+<p>Why the scale matters, concretely:</p>
+<ul>
+<li><strong>It converts &quot;it learns&quot; from a claim into a result.</strong> A self-tuning system that has
+only seen a handful of interactions is a hypothesis; one that has metabolised ~1M
+real-world inputs across 54 uninterrupted days is <em>evidence</em>. The day-1-vs-day-54 drift
+of the personality (§6, A7) is backed by a population, not an anecdote.</li>
+<li><strong>It is what justifies the whole adaptive apparatus.</strong> Trend windows, the 3×/day
+meta-review, daily learning, the interaction budget — that machinery only earns its keep
+at volume and over time. At 54 days × 24 h it had <strong>~162 meta-reviews</strong> and <strong>~54
+daily-learning cycles</strong> to work with; the friction/restraint argument is precisely what
+keeps adaptation stable across that many cycles.</li>
+<li><strong>It reframes the C-series collapse.</strong> &quot;Many → twelve values&quot; is striking on its own;
+&quot;~1M situated human inputs, distilled live into twelve numbers, thirty times a second,
+for 54 days&quot; is the version that lands. <em>Put the number next to C1.</em></li>
+<li><strong>It is a falsifiable, peer-review-grade fact.</strong> A reviewer can weigh ~1M inputs / 54
+days / 24-7; it signals a <em>deployed, sustained</em> work rather than a demo — which is
+exactly the bar the Projects category rewards.</li>
+</ul>
+<p><strong>Phrasing seeds:</strong> &quot;24 hours a day for 54 days.&quot; · &quot;roughly one million encounters.&quot; ·
+&quot;a population, not a prototype.&quot; · &quot;fifty-four days of uninterrupted attention.&quot; · &quot;every
+one of a million inputs distilled, live, to twelve numbers.&quot;</p>
+<blockquote>
+<p><strong>One verification to do before you print a number:</strong> confirm whether <strong>~1M</strong> counts
+<em>unique visitors</em> or <em>unique tracked inputs/sessions</em>. The 34 surviving daily reports log
+<strong>~9.3M raw position events</strong> (the basis for the ~15M/54-day estimate above) and a
+cross-day people tally in the hundreds of thousands — so &quot;~1 million <strong>inputs/encounters</strong>&quot;
+is the safest phrasing unless you have a firm unique-visitor query. State the unit
+explicitly (visitors vs inputs vs events) so it can't be challenged.</p>
+</blockquote>
+<h3 id="15a-each-conceptual-goal-and-where-it-lives-in-the-software">15a. Each conceptual goal, and where it lives in the software</h3>
+<table>
+<thead>
+<tr>
+<th>Conceptual goal (from the overview)</th>
+<th>How the software embodies it (this guide)</th>
+<th>Best evidence / figure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Re-use of ubiquitous infrastructure</strong> — turn forgettable office ceiling panels into an expressive medium</td>
+<td>The entire output layer is <em>deliberately minimal</em>: 12 dimmable panels addressed as one brightness each. The sophistication is upstream, not in exotic hardware.</td>
+<td>C1 / C4 (12 values); §3d</td>
+</tr>
+<tr>
+<td><strong>Open hardware + software</strong> — published toolkit, standard protocols, 3D-printed connectors</td>
+<td>Standard parts throughout: YOLO, OSC, Art-Net/DMX (or 0–10V), SQLite, Three.js — no proprietary stack. The <em>architecture</em> is the contribution, and it's legible/reproducible.</td>
+<td>A1 (all standard components)</td>
+</tr>
+<tr>
+<td><strong>Light as a character</strong> with goals + evolving methods</td>
+<td>The 12 meta-parameters <em>are</em> the character; modes + gestures + dwell phases are its repertoire; aggression/curiosity give it moods and whims.</td>
+<td>§3 / §14.5; A3, A6</td>
+</tr>
+<tr>
+<td><strong>A personality that learns over hours and days</strong></td>
+<td>The three-loop architecture, self-tuning (A7), and daily learning — &quot;day 25 ≠ day 1&quot; is literally the drift of those 12 numbers, logged and auditable.</td>
+<td>§2 / §6; A2, A7</td>
+</tr>
+<tr>
+<td><strong>Measurable evolution</strong> (&quot;more confident, less repetitive&quot;)</td>
+<td>Self-analysis metrics (position entropy, response similarity) + the <code>meta_tuning_reviews</code> audit table make evolution a <em>measurable, reversible</em> claim — and at <strong>~1M inputs over 54 days</strong> it is backed by a population, not an anecdote.</td>
+<td>§15-0; §7 / §8; A7.5, A7.7</td>
+</tr>
+<tr>
+<td><strong>Implicit, intuitive interaction</strong> — &quot;no app, no screen, no instructions&quot;</td>
+<td>Input is <em>presence and flow</em>, not deliberate command; the active/passive zones and proximity response read the body, not an interface.</td>
+<td>§4 / §5; A5</td>
+</tr>
+<tr>
+<td><strong>Friction / restraint as a value</strong> — calm at rush hour, deliberate change</td>
+<td>The interaction budget, mean-reversion, and time-of-day aggression caps encode restraint <em>as engineering</em>: the system can act but chooses the rate.</td>
+<td>§5 / §6; A6, A7.3b</td>
+</tr>
+<tr>
+<td><strong>The 3D model as shared reference / &quot;the installation's brain&quot;</strong></td>
+<td>The calibrated spatial model (zones, panel/camera coordinates, falloff geometry) is the substrate every behaviour reads and the AI agents authored against — BIM-thinking at installation scale.</td>
+<td>§9 spatial frame; B3, C2</td>
+</tr>
+<tr>
+<td><strong>Built with AI coding agents</strong> (a method, not just a tool)</td>
+<td>The whole structured-documentation practice — these diagram guides, the parameter ranges, the test/verify loops — <em>is</em> the agent-authoring method made visible. Made tractable by giving the model a <em>spatial</em> substrate to reason over (§15d).</td>
+<td>this document set; §15d</td>
+</tr>
+<tr>
+<td><strong>The control software <em>is</em> a 3D game</strong></td>
+<td>The controller is a pygame + OpenGL real-time 3D scene (&quot;3D Light Controller V6.5&quot;): physical space, digital model, and control code share one runtime and one coordinate frame.</td>
+<td>§15d; B3, C2</td>
+</tr>
+<tr>
+<td><strong>Public transparency</strong> — live web view of the light's mind</td>
+<td>The two web planes expose both the live state and the long-term trends/reports — the system explains itself in plain language to passers-by.</td>
+<td>§10; A11</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15b-three-candidate-framings-for-the-submission-pick-one-as-the-spine">15b. Three candidate framings for the submission (pick one as the spine)</h3>
+<p>Each reframes the <em>same</em> system around a different load-bearing idea. The strongest for
+<em>Humanism Recoded</em> is <strong>Framing A</strong>, but B and C are viable and reusable for talks/abstracts.</p>
+<ul>
+<li>
+<p><strong>Framing A — &quot;An adaptive temperament from twelve bytes.&quot;</strong>
+<em>Spine:</em> the gap between enormous situated context and a near-trivial output (C1) is
+where the meaning sits. Restraint, legibility, and character over spectacle.</p>
+<ul>
+<li>Hook: ~1M situated human inputs over 54 days, collapsed 30×/second to 12 numbers.</li>
+<li>Payoff: complexity is spent on <em>how to behave</em>, not on resolution or novelty.</li>
+<li>ACADIA fit: directly <em>Embodied Codes</em> + <em>Machines that Care</em>; the friction argument
+reads as a humane stance against the always-optimising machine — and the 54-day /
+~1M-input scale is what proves the temperament actually <em>formed</em> rather than being
+asserted.</li>
+</ul>
+</li>
+<li>
+<p><strong>Framing B — &quot;Re-coding ubiquitous infrastructure.&quot;</strong>
+<em>Spine:</em> open-source re-use — the most invisible object in the built environment (the
+office ceiling panel) made expressive with only standard, published parts.</p>
+<ul>
+<li>Hook: the forgettable made characterful; anyone with panels + a 3D printer can build one.</li>
+<li>Payoff: a reproducible <em>toolkit and method</em>, not a one-off artwork.</li>
+<li>ACADIA fit: <em>Built Grounds</em> + <em>Digital Commons</em>; emphasises accessibility/participation.</li>
+</ul>
+</li>
+<li>
+<p><strong>Framing C — &quot;The model became the brain&quot; (AI-agent authoring).</strong>
+<em>Spine:</em> a 3D spatial model as the shared reference that both human and AI agents author
+against — BIM-thinking scaled down, computation situated in a spatial substrate.</p>
+<ul>
+<li>Hook: the first of the author's installations built with AI coding agents, guided by a
+spatial model rather than prose specs.</li>
+<li>Payoff: a transferable <em>method</em> for authoring spatial-interactive systems with agents.</li>
+<li>ACADIA fit: <em>Embodied Codes</em> + <em>Collective Intelligence</em> (shared human–machine
+authorship); the most novel methodologically, but risks overshadowing the artwork.</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>Recommendation: <strong>lead with A, fold in B and C as one sentence each.</strong> A gives the piece
+its meaning, B gives it reproducibility/relevance, C gives it methodological novelty —
+reviewers reward all three, but only one can be the title idea.</p>
+</blockquote>
+<h3 id="15c-how-it-comes-together-proposed-submission-package">15c. How it comes together — proposed submission package</h3>
+<p><strong>The 600-word arc (refines §13 with the conceptual layer):</strong></p>
+<ul>
+<li>open on the <em>site and the body</em> — a Toronto showroom alcove, presence not input;</li>
+<li>name the <em>character</em> — six personality traits, modes, gestures;</li>
+<li>reveal the <em>three-loop adaptation</em> and the <em>friction</em> that makes it deliberate;</li>
+<li>land the <em>collapse to twelve values</em> as the conceptual climax (C1);</li>
+<li>ground it in <em>scale</em> — 24/7 for 54 days, ~1M inputs — so the adaptation reads as
+demonstrated, not promised;</li>
+<li>close on <em>what it means</em> — re-use, transparency, an inhabitant rather than a controller.</li>
+</ul>
+<p><strong>The 10 figures (maps the §11 set to the conceptual beats):</strong></p>
+<ul>
+<li><strong>Place &amp; body:</strong> B3 spatial plan (the alcove, zones, cameras).</li>
+<li><strong>System at a glance:</strong> A1 pipeline; A2 three loops.</li>
+<li><strong>Character:</strong> A3 modes; a personality radar (neutral vs as-deployed).</li>
+<li><strong>Adaptation &amp; friction:</strong> A7 self-tuning loop; A7.3b worked friction example.</li>
+<li><strong>The collapse (climax):</strong> C1 funnel; C3 per-panel math (or C4 wiring).</li>
+<li><strong>Transparency:</strong> A11 web planes <em>or</em> a photo of the live installation.</li>
+</ul>
+<p><strong>Threads to make explicit that the technical guide currently under-states:</strong></p>
+<ul>
+<li>The <strong>alcove/columns</strong> as the <em>designed</em> reason for the active/passive split — tie the
+architecture of the site to the architecture of the software.</li>
+<li><strong>&quot;Measurable evolution&quot;</strong> as a <em>falsifiable</em> claim backed by the audit tables and the
+<strong>54-day / ~1M-input scale</strong> — strong for a peer-reviewed venue; consider one before/after
+metric (e.g. week-1 vs week-7 engagement rate or gesture variety) if the data supports it.</li>
+<li><strong>Scale as a headline fact</strong> (§15-0): give it a sentence of its own near the top — it is
+the single most efficient way to signal a <em>deployed, sustained</em> work to reviewers.</li>
+<li>The <strong>AI-agent + spatial-model method</strong> as a sidebar/short section — it's a genuine
+contribution and very on-theme, but keep it from eating the artwork (Framing C risk).</li>
+<li><strong>Restraint as the humanist hook</strong> — the budget/aggression-cap story is the single
+clearest bridge to <em>Humanism Recoded</em>; state it as a design value, not a feature.</li>
+</ul>
+<p><strong>Open questions for you (these change the emphasis):</strong></p>
+<ul>
+<li>Is the ACADIA submission about <strong>Drop Ceiling v1 (this specific Haworth install)</strong>, or
+the <strong>toolkit/method</strong> in general? (Decides Framing A/B vs C.)</li>
+<li>Do you have <strong>quantified</strong> day-1-vs-week-7 evidence you're willing to publish? (Decides
+whether &quot;measurable evolution&quot; is a headline or a soft claim.)</li>
+<li>How much of the <strong>AI-agent development story</strong> do you want foregrounded vs. kept as a
+method note? (It's novel but can dominate.)</li>
+</ul>
+<h3 id="15d-the-development-method-a-spatial-substrate-for-human-ai-authoring">15d. The development method — a spatial substrate for human–AI authoring</h3>
+<p><em>This is the substance behind Framing C, and the project's clearest methodological
+contribution. The argument: a spatial-interactive system is hard for a code-generating
+model to author because the problem is fundamentally <strong>geometric</strong>, not textual. Drop
+Ceiling's answer was to make the geometry a first-class, shared artifact that both the
+human and the model read and write. Two pieces did this — a 3D control runtime, and a
+lightweight 3D modeller that emits &quot;model context.&quot;</em></p>
+<p><strong>Piece 1 — the control software is itself a 3D game (pygame + OpenGL).</strong>
+The final controller (<code>lightController_osc.py</code>, &quot;3D Light Controller V6.5&quot;) is not a
+headless script; it is a real-time 3D scene built in <strong>pygame + PyOpenGL</strong>
+(<code>pygame.display.set_mode(..., DOUBLEBUF | OPENGL)</code>, <code>gluPerspective</code>, hand-rolled
+<code>draw_panel</code> / <code>draw_sphere</code> / <code>draw_ellipsoid_wireframe</code> / <code>draw_tracked_person</code>). This
+collapses three things that are usually separate into <strong>one runtime and one coordinate
+frame</strong>:</p>
+<ul>
+<li>the <strong>physical space</strong> (panel units, cameras, the alcove, tracking zones — drawn to
+scale in cm),</li>
+<li>the <strong>digital model</strong> (the virtual point light, its falloff ellipsoid, the wander box), and</li>
+<li>the <strong>control code</strong> (the behaviour system writing that light, live).</li>
+</ul>
+<p>Why it matters for the submission: the &quot;digital twin&quot; is not a visualisation bolted on
+afterward — it <em>is</em> the program. You can watch the light think in the same 3D space the
+panels live in. It is also why the C-series collapse is legible: the OpenGL scene and the
+Art-Net output read the <em>same</em> <code>PointLight</code> state (§3d–§3f, C2).</p>
+<p><img src="diagrams/assets/P4_pygame_3d_twin.png" alt="P4 — The pygame + OpenGL control runtime (&quot;3D Light Controller V6.5&quot;): the panel units, the glowing virtual point light with its falloff wireframe, tracking zones, and live parameter sliders, all in one 3D scene" />
+<em>Photo P4 — the control software as a 3D game: physical layout, the virtual light, and the
+live control parameters share one runtime and one coordinate frame.</em></p>
+<p><strong>Piece 2 — a lightweight 3D modeller that generates model context (<code>spatial-editor/</code>).</strong>
+To get a coding model (Opus 4.5 / 4.6) to reason correctly about that space, the project
+needed a way to hand it the geometry in a form it could use. The result is a purpose-built
+<strong>browser 3D editor</strong> (React + Three.js / react-three-fiber, in <code>spatial-editor/</code>) whose
+explicit job is to <strong>export spatial context for an agent prompt</strong>:</p>
+<ul>
+<li>A small, deliberate <strong>scene schema</strong> (<code>src/schema.js</code>): every object has geometry, a
+<strong>role</strong> (<code>actuator</code> / <code>sensor</code> / <code>zone</code> / <code>reference</code> / <code>structural</code>), tags, and
+relationships. Object types include <code>camera</code> (with an FOV frustum), <code>zone</code> (bounded
+trigger volume), <code>mesh</code> (imported OBJ), <code>point</code>, <code>box</code>, <code>plane</code>. The schema is designed
+to be &quot;human-readable as JSON <strong>and</strong> agent-parseable for spatial context.&quot;</li>
+<li>A <strong>context exporter</strong> (<code>src/utils/contextExport.js</code>): turns the scene into a structured
+<strong>natural-language Markdown summary</strong> — grouped by role, listing positions, bounds, and
+relationships — that pastes &quot;directly into an agent prompt.&quot; This is the literal bridge
+from a 3D model to a language model's working context.</li>
+<li>A <strong>converter</strong> (<code>src/utils/dropCeilingConverter.js</code>) that round-trips the production
+<code>IO/world_coordinates.json</code> into the editor and back, validating the schema against the
+real installation.</li>
+</ul>
+<p><img src="diagrams/assets/P5_agent_authoring_session.png" alt="P5 — A development session: the 3D controller scene (left) beside an AI coding-agent conversation (right), the agent writing capture/control logic against the spatial model" />
+<em>Photo P5 — the human–AI authoring method in practice: the spatial runtime and the coding
+agent side by side, the model reasoning over the shared geometry. (Crop/clean before
+publishing — this is a working desktop capture, not a finished figure.)</em></p>
+<p><strong>Piece 3 — the JSON context files (the durable shared reference).</strong>
+Between the editor and the running system sits a set of plain-JSON context files that <em>are</em>
+the agreed geometry — the same files the human edits, the model reads, and both
+<code>camera_tracker_osc.py</code> and <code>lightController_osc.py</code> consume at runtime:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Holds</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>world_coordinates.json</code></td>
+<td>coordinate system, panel unit + subpanel positions/angles, camera positions, zone bounds</td>
+<td>controller, tracker, editor converter</td>
+</tr>
+<tr>
+<td><code>camera_calibration.json</code></td>
+<td>per-camera intrinsics + solved pose (the ArUco/homography result)</td>
+<td>tracker (floor projection), controller (camera viz)</td>
+</tr>
+<tr>
+<td><code>tracker_settings.json</code></td>
+<td>live tracker tuning (confidence, fusion/match distances, smoothing)</td>
+<td>tracker</td>
+</tr>
+<tr>
+<td><code>slider_settings.json</code></td>
+<td>the 12 meta-parameters' live values</td>
+<td>controller</td>
+</tr>
+<tr>
+<td><code>autotune_overrides.json</code></td>
+<td>the tuner's home values / floors / caps / budget</td>
+<td>controller (hot-reload), meta-review (writes)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The method in one sentence (for the text):</strong> <em>the 3D model was not a picture of the
+installation — it was the installation's shared brain, a spatial substrate that the
+designer and the AI coding agents both authored against, exported as natural-language
+context for the model and as JSON for the runtime.</em> This generalises beyond Drop Ceiling:
+it is a repeatable pattern for <strong>authoring spatial-interactive systems with coding agents</strong>
+— give the model geometry as structured context, not prose.</p>
+<p><strong>◧ DRAW — Figure E1 (proposed, not yet rendered): the authoring loop.</strong> A triangle:
+<strong>(1) 3D modeller</strong> (<code>spatial-editor</code>) → exports → <strong>(2) model context</strong> (Markdown scene
+summary + JSON files) → feeds → <strong>(3) AI coding agent</strong> (Opus 4.5/4.6) → writes →
+<strong>(4) control code + the pygame 3D twin</strong> → which is observed back in the same coordinate
+frame → informing the next edit to the modeller. Contrast with the <em>runtime</em> loops (A2):
+this is the <strong>build-time</strong> loop, the one that produced the system. <em>(Say the word and I'll
+render E1 in the diagram set.)</em></p>
+<p><strong>Honest scoping notes (so the claim survives review):</strong></p>
+<ul>
+<li>The editor is a <strong>bespoke tool built for this project</strong>, not a released product — frame
+it as &quot;a lightweight modeller we built to generate spatial context,&quot; not a general
+toolkit, unless you intend to publish it.</li>
+<li>Name the models precisely (<strong>Claude Opus 4.5 / 4.6</strong>) and the role (coding <em>agents</em> that
+use tools and test, vs. chat) — that distinction is the novel part and your overview
+already makes it.</li>
+<li>This is <strong>build-time method</strong>, distinct from the <strong>runtime</strong> AI-ish behaviour (the
+self-tuner). Keep the two from blurring: agents <em>authored</em> the system; the deployed
+system then <em>self-tuned</em> on its own. Both are &quot;AI,&quot; but at different layers.</li>
+</ul>
+<hr />
+<h2 id="16-three-structural-outlines-for-the-acadia-submission">16. Three structural outlines for the ACADIA submission</h2>
+<p><em>This document is now a broad reference for several publications. This section narrows back
+to the <strong>one</strong> deliverable: the ACADIA 2026 <strong>Projects</strong> submission — <strong>600 words
+(excluding citations/captions) + max 10 images</strong>, blind peer-reviewed, exhibited as a
+poster. Three complete outlines follow, each built on a different spine from §15b. All
+three fit the word/image budget. Pick one; they are mutually exclusive as structures but
+share most of the same material.</em></p>
+<p><strong>Shared constraints (apply to all three):</strong></p>
+<ul>
+<li>~600 words is <strong>~5 short paragraphs</strong> — roughly 90–130 words each. Every paragraph must
+earn its place; there is no room for a literature review (that goes to citations).</li>
+<li>10 images is generous — use it. Lead with the <strong>installation photo (P1)</strong>; reserve 1–2
+slots for the <strong>C-series collapse</strong> (the strongest single idea).</li>
+<li>The <strong>scale fact (§15-0: 24/7 × 54 days, ~1M inputs)</strong> belongs in <em>every</em> version — it
+is what turns &quot;it learns&quot; into &quot;it learned.&quot;</li>
+<li>State the <strong>site</strong> (Haworth showroom, 55 University Ave, the column alcove) early; it
+motivates the active/passive split for free.</li>
+</ul>
+<hr />
+<h3 id="outline-1-quot-an-adaptive-temperament-from-twelve-bytes-quot-framing-a-meaning-led">Outline 1 — &quot;An adaptive temperament from twelve bytes&quot; (Framing A: meaning-led)</h3>
+<p><em>Best fit for</em> Humanism Recoded <em>(Embodied Codes + Machines that Care). Leads with the
+artwork and its meaning; the method is a closing note. Lowest risk, highest thematic fit.</em></p>
+<table>
+<thead>
+<tr>
+<th>§</th>
+<th>Paragraph (≈ words)</th>
+<th>Carries</th>
+<th>Figure(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>The corner.</strong> Site, body, alcove; presence-not-input; the light as an inhabitant. (110)</td>
+<td>hook + site</td>
+<td>P1 installation photo</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>A character with traits.</strong> Six personality parameters; modes/gestures/dwell; reads flow and bodies, not commands. (120)</td>
+<td>what it <em>is</em></td>
+<td>A3 modes; P4 3D twin</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Three timescales + friction.</strong> Reacts now, anticipates the hour, retunes over days; the interaction budget makes adaptation deliberate. (130)</td>
+<td>the engine</td>
+<td>A2 loops; A7 / A7.3b</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>A million encounters.</strong> 24/7 × 54 days, ~1M inputs; the temperament <em>formed</em>, measurably (audit + self-analysis). (110)</td>
+<td>scale = evidence</td>
+<td>D1 or D2</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Twelve numbers.</strong> The collapse: all of it distilled, 30×/s, to 12 panel values; restraint as the point. Close on re-use + transparency. (110)</td>
+<td>the meaning</td>
+<td><strong>C1</strong> (+ C3)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Image budget (10):</strong> P1, A2, A3, A7, A7.3b, D2, C1, C3, P4, + one (B3 plan <em>or</em> A11 web).</li>
+<li><strong>Why it wins:</strong> the title idea (huge context → tiny output) is unique and on-theme; the
+friction argument reads as a <em>humane</em> stance, which is exactly the conference's lens.</li>
+<li><strong>Risk:</strong> under-sells the open-source toolkit and the AI-agent method. Fine if the
+submission is about <em>this artwork</em>, not the <em>method</em>.</li>
+</ul>
+<hr />
+<h3 id="outline-2-quot-re-coding-ubiquitous-infrastructure-quot-framing-b-toolkit-maker-led">Outline 2 — &quot;Re-coding ubiquitous infrastructure&quot; (Framing B: toolkit/maker-led)</h3>
+<p><em>Best fit for</em> Built Grounds + Digital Commons*. Leads with the open-source re-use of the
+most invisible object in the built environment. Most accessible/reproducible framing.*</p>
+<table>
+<thead>
+<tr>
+<th>§</th>
+<th>Paragraph (≈ words)</th>
+<th>Carries</th>
+<th>Figure(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>The forgettable made expressive.</strong> Standard office ceiling panels + 0–10V; 3D-printed connectors; open toolkit on GitHub. (120)</td>
+<td>hook + openness</td>
+<td>P2 unit geometry; P1</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>A pixel made of a panel.</strong> 12 panels as one spatial display; the virtual point light; brightness by distance. (110)</td>
+<td>the mechanism</td>
+<td>C1 <em>or</em> C4 wiring</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Behaviour from standard parts.</strong> YOLO + OSC + Art-Net + SQLite; a character (traits/modes) with no proprietary stack. (120)</td>
+<td>the system</td>
+<td>A1 pipeline; A3</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>It learns in public.</strong> Three loops + friction; 24/7 × 54 days, ~1M inputs; transparent live/▶trend web views. (130)</td>
+<td>adaptation + scale</td>
+<td>A2; D1; A11</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Anyone can build one.</strong> Reproducibility, the toolkit as contribution; what you'd change to re-deploy. (110)</td>
+<td>the payoff</td>
+<td>P3 system diagram</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Image budget (10):</strong> P1, P2, A1, A3, A2, C1, C4, D1, A11, P3.</li>
+<li><strong>Why it wins:</strong> &quot;accessible interactive lighting from office junk&quot; is a strong,
+memorable, <em>participatory</em> pitch; aligns with the commons subthemes.</li>
+<li><strong>Risk:</strong> the deep self-tuning (your most novel technical work) becomes a supporting
+detail rather than the star.</li>
+</ul>
+<hr />
+<h3 id="outline-3-quot-the-model-became-the-brain-quot-framing-c-method-led">Outline 3 — &quot;The model became the brain&quot; (Framing C: method-led)</h3>
+<p><em>Best fit for</em> Embodied Codes + Collective Intelligence*. Leads with the human–AI authoring
+method — the spatial substrate that let coding agents reason about a geometric problem.
+Most methodologically novel; highest reviewer-interest ceiling, highest risk.*</p>
+<table>
+<thead>
+<tr>
+<th>§</th>
+<th>Paragraph (≈ words)</th>
+<th>Carries</th>
+<th>Figure(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>A geometric problem for a text model.</strong> The artwork in one breath, then the authoring challenge: agents can't see space. (110)</td>
+<td>hook + problem</td>
+<td>P1; P5 authoring session</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>A spatial substrate.</strong> The pygame 3D twin + the <code>spatial-editor</code> that exports scene → natural-language context + JSON. (130)</td>
+<td>the method</td>
+<td>P4 twin; E1 authoring loop</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>What the agents built.</strong> Character, gesture library, self-tuner — authored against the shared model. (110)</td>
+<td>the result</td>
+<td>A3; A7</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Then it ran itself.</strong> Build-time vs runtime AI; 24/7 × 54 days, ~1M inputs; self-tuning + audit. (120)</td>
+<td>the distinction + scale</td>
+<td>A2; D2</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Collapse + claim.</strong> 12 values; and the transferable pattern: give models geometry as context. (120)</td>
+<td>meaning + generalisation</td>
+<td>C1; (E1 reprise)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Image budget (10):</strong> P1, P5, P4, <strong>E1</strong>, A3, A7, A2, D2, C1, P3.</li>
+<li><strong>Why it wins:</strong> genuinely new contribution (authoring spatial-interactive systems with
+coding agents); the &quot;3D model as shared brain&quot; line is memorable and very on-theme.</li>
+<li><strong>Risk:</strong> the method can eat the artwork; reviewers may want the <em>art</em> foregrounded.
+Also depends on <strong>rendering Figure E1</strong> (proposed in §15d, not yet built) and on cleaning
+<strong>P5</strong> (currently a raw desktop capture).</li>
+</ul>
+<hr />
+<h3 id="choosing-a-quick-decision-aid">Choosing — a quick decision aid</h3>
+<table>
+<thead>
+<tr>
+<th>If your priority is…</th>
+<th>Use</th>
+<th>Lead image</th>
+<th>Must-build</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thematic fit + the artwork's meaning</td>
+<td><strong>Outline 1</strong></td>
+<td>P1</td>
+<td>— (all figures exist)</td>
+</tr>
+<tr>
+<td>Accessibility, openness, reproducibility</td>
+<td><strong>Outline 2</strong></td>
+<td>P1 + P2</td>
+<td>— (all figures exist)</td>
+</tr>
+<tr>
+<td>Methodological novelty (AI authoring)</td>
+<td><strong>Outline 3</strong></td>
+<td>P1 + P5</td>
+<td><strong>E1</strong> render; P5 cleanup</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommendation:</strong> lead with <strong>Outline 1</strong> and fold one sentence of B (open toolkit) and
+one of C (built with coding agents) into §5 — it keeps the strongest thematic spine while
+signalling the other two contributions. Promote to Outline 2 or 3 only if the <em>call for
+your specific session/subtheme</em> rewards the toolkit or the method over the artwork.</p>
+<p><strong>Cross-cutting to-dos before drafting prose (all outlines):</strong></p>
+<ul>
+<li>Confirm the <strong>0–10V vs Art-Net</strong> signal path (one sentence) — §15 reconciliation #1.</li>
+<li>Decide the <strong>unit</strong> for the headline number (visitors vs inputs vs events) — §15-0 note.</li>
+<li>Pick the <strong>one</strong> before/after evolution metric you can stand behind (week-1 vs week-7).</li>
+<li>If Outline 3: commission <strong>E1</strong> and crop <strong>P5</strong>.</li>
+</ul>
+<hr />
+<h2 id="17-candidate-references-acm-digital-library">17. Candidate references (ACM Digital Library)</h2>
+<p><em>Verified against the ACM Digital Library full-text collection (<code>dl.acm.org</code>) on
+2026-05-31. Venue, year, pages, and DOI are copied exactly as listed in ACM's catalogue.
+Grouped by the four areas requested; these are <strong>candidates</strong> — read abstracts before
+citing. ACADIA proceedings are indexed in CumInCAD, but these ACM sources are the
+verifiable anchors. (Also maintained standalone in
+<a href="ACADIA_2026_REFERENCES.md"><code>ACADIA_2026_REFERENCES.md</code></a>.)</em></p>
+<blockquote>
+<p><strong>Framing note on &quot;AR.&quot;</strong> Drop Ceiling is light in physical space driven by camera
+tracking — no headset, no screen-space overlay. The precise ACM term is <strong>Spatial
+Augmented Reality (SAR)</strong> / projection-based AR: digital response registered to real
+surfaces, viewable without worn devices. Framing the project as SAR is both more accurate
+and better supported by the literature below. The fiducial-marker calibration that
+registers the cameras to the floor is itself a classic AR registration technique, tying
+§1/§15d (markers) to §17.3 (AR).</p>
+</blockquote>
+<h3 id="17-1-aruco-fiducial-markers-homography-amp-multi-camera-registration">17.1 ArUco / fiducial markers, homography &amp; multi-camera registration</h3>
+<ol>
+<li>
+<p><strong>Artificial Markers: A Comprehensive Systematic Review and Design Framework.</strong>
+Benedito Ribeiro Neto, Bianchi Meiguins, Tiago Araújo, Carlos dos Santos. <em>ACM Computing
+Surveys (CSUR)</em> 58(9), Article 236, pp. 1–35, Feb 2026.
+https://doi.org/10.1145/3793661
+→ <em>Strongest single anchor for the marker layer:</em> a current CSUR survey of fiducial
+markers (ArUco and beyond), pose-estimation accuracy, and a design framework.</p>
+</li>
+<li>
+<p><strong>Robust and Scalable Indoor Robot Localization Based on Fusion of Infrastructure Camera
+Feeds and On-Board Sensors.</strong> Poornima J D, Raghu Krishnapuram, Mukunda Bharatheesha,
+Bharadwaj Amrutur, Suresh Sundaram. <em>AIR '23: 6th Int'l Conf. on Advances in Robotics</em>,
+Article 41, pp. 1–7, Nov 2023. https://doi.org/10.1145/3610419.3610460
+→ Directly on point for <strong>fusing multiple fixed camera feeds</strong> into one pose estimate.</p>
+</li>
+<li>
+<p><strong>MoiréBoard: A Stable, Accurate and Low-cost Camera Tracking Method.</strong> Chang Xiao,
+Changxi Zheng. <em>UIST '21: 34th ACM Symp. on User Interface Software and Technology</em>,
+pp. 881–893, Oct 2021. https://doi.org/10.1145/3472749.3474793
+→ Optional: low-cost camera tracking/registration in an HCI venue; useful for the
+accuracy/cost trade-off that motivated a marker-based setup.</p>
+</li>
+<li>
+<p><strong>ArUcoTUI: Software Toolkit for Prototyping Tangible Interactions on Portable Flat-Panel
+Displays with OpenCV.</strong> Rong-Hao Liang, Steven Houben, Krithik Ranjan, S. Sandra Bae,
+Peter Gyory, Ellen Yi-Luen Do, Clement Zheng. <em>TEI '26</em>, Article 58, pp. 1–8, Mar 2026.
+https://doi.org/10.1145/3731459.3779317
+→ Supporting: a recent ACM example of ArUco + OpenCV as the interaction substrate.</p>
+</li>
+</ol>
+<h3 id="17-2-core-algorithms-amp-concepts-of-the-self-tuning-system">17.2 Core algorithms &amp; concepts of the self-tuning system</h3>
+<ol start="5">
+<li>
+<p><strong>A Tutorial on Multi-Armed Bandit Applications for Large Language Models.</strong> Djallel
+Bouneffouf, Raphaël Féraud. <em>KDD '24: 30th ACM SIGKDD Conf. on Knowledge Discovery and
+Data Mining</em>, pp. 6412–6413, Aug 2024. https://doi.org/10.1145/3637528.3671440
+→ Concise, citable ACM <strong>overview of MAB methods</strong> (incl. Thompson sampling) and the
+exploration/exploitation framing — grounds the bandit without a math detour.</p>
+</li>
+<li>
+<p><strong>What You Reward Is What You Learn: Comparing Rewards for Online Speech Policy
+Optimization in Public HRI.</strong> Sichao Song, Yuki Okafuji, Kaito Ariu, Amy Koike. <em>HRI '26:
+21st ACM/IEEE Int'l Conf. on Human-Robot Interaction</em>, pp. 187–195, Mar 2026.
+https://doi.org/10.1145/3757279.3785589
+→ <em>Unusually close analogue:</em> <strong>online learning that adapts behaviour policy in a public
+space</strong>, explicitly contrasting &quot;fixed, hand-tuned parameters&quot; with online adaptation to
+&quot;non-stationary conditions&quot; — almost exactly Drop Ceiling's self-tuning argument, and it
+discusses reward design (the engagement-score question).</p>
+</li>
+<li>
+<p><strong>Thompson Sampling with Unrestricted Delays.</strong> Han Wu, Stefan Wager. <em>EC '22: 23rd ACM
+Conf. on Economics and Computation</em>, pp. 937–955, Jul 2022.
+https://doi.org/10.1145/3490486.3538376
+→ Optional/technical: regret bounds for <strong>Thompson sampling under delayed feedback</strong> —
+relevant because engagement outcomes arrive delayed relative to the expression choice.</p>
+</li>
+<li>
+<p><strong>A Behavioral Model for Exploration vs. Exploitation: Theoretical Framework and
+Experimental Evidence.</strong> Jingying Ding, Yifan Feng, Ying Rong. <em>EC '25: 26th ACM Conf. on
+Economics and Computation</em>, p. 88, Jul 2025. https://doi.org/10.1145/3736252.3742497
+→ Optional: frames the <strong>exploration–exploitation trade-off</strong> itself (curiosity vs.
+mean-reversion in the tuner) via the bandit lens.</p>
+</li>
+</ol>
+<h3 id="17-3-augmented-reality-framing-the-project-spatial-ar-projection-based">17.3 Augmented reality — framing the project (Spatial AR / projection-based)</h3>
+<ol start="9">
+<li>
+<p><strong>DroneSAR: Extending Physical Spaces in Spatial Augmented Reality Using Projection on a
+Drone.</strong> Rajkumar Darbar, Joan Sol Roo, Thibault Lainé, [+1]. <em>MUM '19: 18th Int'l Conf.
+on Mobile and Ubiquitous Multimedia</em>, Article 4, pp. 1–7, Nov 2019.
+https://doi.org/10.1145/3365610.3365631
+→ Clean, citable <strong>definition of SAR</strong> (&quot;transforms real-world objects into interactive
+displays … without the need to wear any special [gear]&quot;) — ideal for defining the
+project's AR category.</p>
+</li>
+<li>
+<p><strong>Diminishable Visual Markers on Fabricated Projection Object for Dynamic Spatial
+Augmented Reality.</strong> Hirotaka Asayama, Daisuke Iwai, Kosuke Sato. <em>SIGGRAPH Asia '15
+Emerging Technologies</em>, Article 7, pp. 1–2, Nov 2015.
+https://doi.org/10.1145/2818466.2818477
+→ Ties <strong>SAR + fiducial markers</strong> together in one reference — the same marker-based
+registration idea Drop Ceiling uses, framed within SAR.</p>
+</li>
+<li>
+<p><strong>FamiliAR Feedback: Investigating Feedback Modality and Familiarity in Classroom
+Settings Using Spatial Augmented Reality.</strong> Nick Wittig, Yannick Dohmen, Jonathan
+Liebers, [+3]. <em>MUM '25: 24th Int'l Conf. on Mobile and Ubiquitous Multimedia</em>,
+pp. 273–284, Nov 2025. https://doi.org/10.1145/3771882.3771883
+→ A current SAR study showing the term/method are live in recent ACM literature.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>Foundational anchor to add (verify before citing):</strong> Bimber &amp; Raskar, <em>Spatial
+Augmented Reality: Merging Real and Virtual Worlds</em> (A K Peters, 2005) is the canonical
+SAR reference. It is a book, not ACM-hosted, so it was <strong>not</strong> verified in DL — cite from
+the original if you want the field-defining reference alongside the ACM examples.</p>
+</blockquote>
+<h3 id="17-4-adjacent-framing-interactive-light-in-public-space-media-architecture">17.4 Adjacent / framing — interactive light in public space, media architecture</h3>
+<ol start="12">
+<li>
+<p><strong>Engaging Passers-by with Rhythm: Applying Feedforward Learning to a Xylophonic Media
+Architecture Facade.</strong> Binh Vinh Duc Nguyen, Jihae Han, [+3]. <em>CHI '23: 2023 CHI Conf.
+on Human Factors in Computing Systems</em>, Article 182, pp. 1–21, Apr 2023.
+https://doi.org/10.1145/3544548.3580761
+→ <em>Closest sibling project found:</em> a <strong>permanent media-architecture facade</strong> that engages
+<strong>passers-by</strong> and applies <strong>learning</strong> — directly comparable on permanence, public-space
+engagement, and adaptive behaviour.</p>
+</li>
+<li>
+<p><strong>Towards Responsive Architecture that Mediates Place: Recommendations on How and When an
+Autonomously Moving Robotic Wall Should Adapt a Spatial Layout.</strong> Binh Vinh Duc Nguyen,
+Jihae Han, Andrew Vande Moere. <em>PACMHCI</em> 6(CSCW2), Article 467, pp. 1–27, Nov 2022.
+https://doi.org/10.1145/3555568
+→ On <strong>responsive architecture</strong> and <em>when</em> an autonomous system should adapt — speaks to
+the friction/restraint argument (acting deliberately, not constantly).</p>
+</li>
+<li>
+<p><strong>Using Embodied Audio-Visual Interaction to Promote Social Encounters Around Large Media
+Façades.</strong> Luke Hespanhol, Martin Tomitsch, Oliver Bown, [+1]. <em>DIS '14: 2014 Conf. on
+Designing Interactive Systems</em>, pp. 945–954, Jun 2014.
+https://doi.org/10.1145/2598510.2598568
+→ A <strong>large-scale interactive light intervention in urban space</strong> addressing the
+addressivity/engagement challenges of public media.</p>
+</li>
+<li>
+<p><strong>Playing with the Spirit of a Place: Designing Urban Interactions with
+Hybrid-Resolution Media Facades.</strong> Peggy Liu, Luke Hespanhol. <em>MAB '20: 5th Media
+Architecture Biennale Conference</em>, pp. 31–41, Oct 2021.
+https://doi.org/10.1145/3469410.3469414
+→ Explicitly pairs <strong>&quot;responsive low-resolution LED lighting&quot;</strong> with high-res displays —
+supports the deliberately minimal 12-panel palette as a design stance, not a limitation.</p>
+</li>
+<li>
+<p><strong>The Dual Skins of a Media Façade: Explicit and Implicit Interactions.</strong> Claude Fortin,
+Kate Hennessy. <em>SIGGRAPH '15 Art Papers</em>, pp. 348–356, Jul 2015.
+https://doi.org/10.1145/2810177.2810181
+→ On <strong>implicit vs. explicit interaction</strong> at a Montréal media façade — relevant to Drop
+Ceiling's mostly-implicit interaction model and its Canadian site.</p>
+</li>
+</ol>
+<h3 id="17-5-quick-pick-shortlist-if-you-cite-only-6">17.5 Quick-pick shortlist (if you cite only ~6)</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Markers / homography / fusion</td>
+<td><strong>#1 (CSUR marker survey)</strong> + <strong>#2 (multi-camera fusion)</strong></td>
+</tr>
+<tr>
+<td>Self-tuning algorithm</td>
+<td><strong>#6 (online policy adaptation in public HRI)</strong> + <strong>#5 (MAB overview)</strong></td>
+</tr>
+<tr>
+<td>AR framing</td>
+<td><strong>#9 (SAR definition)</strong> (+ Bimber &amp; Raskar book from origin)</td>
+</tr>
+<tr>
+<td>Public-space sibling work</td>
+<td><strong>#12 (learning media facade, CHI '23)</strong></td>
+</tr>
+</tbody>
+</table>
+<p><em>&quot;[+N]&quot; = additional authors truncated in ACM's list view; expand on the article page
+before final citation. All DOIs verified resolvable on dl.acm.org; pages/years copied from
+ACM catalogue entries on 2026-05-31.</em></p>
+<hr />
+<h2 id="18-the-run-data-story-software-capture-gaps-amp-recovery">18. The run-data story — software, capture, gaps &amp; recovery</h2>
+<p><em>This section documents the actual 54-day deployment as it shows up <strong>in the data</strong>: when
+the software changed, what the database captured, where it broke, and how it was recovered.
+It is a key part of the project's story — not a caveat to hide but a narrative about an
+adaptive system that was <strong>built while it ran</strong>, whose own reporting pipeline became the
+backup that saved data its database discarded. Full working notes and the merge/estimation
+methods live in <a href="analysis/DATA_TIMELINE_AND_MERGE.md"><code>analysis/DATA_TIMELINE_AND_MERGE.md</code></a>;
+the rendered figure is <code>diagrams/F1_software_data_timeline</code>.</em></p>
+<h3 id="18a-headline">18a. Headline</h3>
+<p>Across the run the installation generated <strong>~23.3 million tracking events over 48 days of
+coverage (Jan 29 – Mar 17 2026)</strong>. The software was under continuous development the entire
+time — versions <strong>V2 → V4 → V5 → V6 → V6.5c</strong> — so <strong>what the database captured changed as
+the software changed</strong>. The data is therefore not a flat log; it is a record of a system
+and its instrument co-evolving in public.</p>
+<h3 id="18b-two-databases-complementary-not-duplicate">18b. Two databases, complementary not duplicate</h3>
+<p>The full record survived as <strong>two intact SQLite files</strong> (both pass integrity checks,
+identical schemas), each covering a different stretch:</p>
+<table>
+<thead>
+<tr>
+<th>Copy</th>
+<th>Size</th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&quot;early&quot; (<code>IO/tracking_history.db</code>)</td>
+<td>487 MB</td>
+<td>Feb 12–25</td>
+</tr>
+<tr>
+<td>&quot;late&quot; (<code>tracking_history.db</code>)</td>
+<td>628 MB</td>
+<td>late-Jan, Feb 25 – Mar 17</td>
+</tr>
+</tbody>
+</table>
+<p>They were merged into a single read-only analysis database
+(<code>analysis/merged_run.db</code>), de-duplicated, with every row tagged by source. The early copy
+fills exactly the window the late copy was missing.</p>
+<h3 id="18c-the-software-data-timeline-figure-f1">18c. The software/data timeline (Figure F1)</h3>
+<p><img src="diagrams/png/F1_software_data_timeline.png" alt="Figure F1 — two-lane timeline: daily tracking events (measured, partial, estimated, and report-recovered days) above the software-version milestones (V2 to V6.5c, the Feb 12 DB fix, and AWARE mode entering the data on Mar 15), on one shared date axis" />
+<em>Figure F1 — capture volume and quality (top) aligned to the software versions (bottom):
+what the database recorded tracked what the software could do.</em></p>
+<p>The data records the software's evolution; cross-checked against git commit dates:</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>What the data shows</th>
+<th>Software event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jan 27–29</td>
+<td>run begins</td>
+<td><code>V2</code>, active/passive fixes</td>
+</tr>
+<tr>
+<td><strong>Feb 12</strong></td>
+<td>capture stabilises after trace days</td>
+<td><strong><code>fixed corrupt database</code></strong> (calibration/DB fix)</td>
+</tr>
+<tr>
+<td>Feb 23</td>
+<td><code>light_behavior</code> logging begins; 13 gestures + 4 modes first appear</td>
+<td>V5-era behaviour system</td>
+</tr>
+<tr>
+<td>Feb 25</td>
+<td><code>sweep</code> gesture appears</td>
+<td><code>V5</code> (anisotropic falloff, SWEEP/FOCUS)</td>
+</tr>
+<tr>
+<td>Mar 2–4</td>
+<td>redeploy churn, then stabilises</td>
+<td><code>the big v6 update</code> → <code>V6.1*</code> → <code>V6.5c</code></td>
+</tr>
+<tr>
+<td>Mar 3</td>
+<td>three-tier passive behaviour</td>
+<td><code>V6.5: passive-flow, three tiers</code></td>
+</tr>
+<tr>
+<td><strong>Mar 15</strong></td>
+<td><strong><code>aware</code> mode first appears in the data</strong>; <code>playful</code> gesture</td>
+<td>V6.5 three-tier reaching steady logging</td>
+</tr>
+<tr>
+<td>Mar 16</td>
+<td><code>focus</code> gesture appears</td>
+<td>late V6.5 gesture set complete</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Consequences for any longitudinal claim:</strong></p>
+<ul>
+<li>The <strong>mode vocabulary is not constant</strong> — <code>aware</code> only exists from <strong>Mar 15</strong>; before
+that the light had <strong>four</strong> modes, not five.</li>
+<li>The <strong>gesture vocabulary grew</strong> over the run (13 → +sweep → +playful → +focus). &quot;16
+gestures&quot; describes the <strong>final</strong> system, not the whole run.</li>
+<li><strong><code>light_behavior</code></strong> (the light's own state log) is <strong>sparse</strong> — only ~8 substantial days
+(Feb 23–25, Mar 15–17) — so light-state/self-analysis figures are windowed, not run-wide.</li>
+</ul>
+<h3 id="18d-the-calibration-artifact-jan-29-feb-2">18d. The calibration artifact (Jan 29 – Feb 2)</h3>
+<p>An <strong>uncorrected tracking offset</strong> early in the run mapped nearly every pedestrian into the
+<strong>active</strong> zone. The active-share is the tell:</p>
+<table>
+<thead>
+<tr>
+<th>Window</th>
+<th>Active share</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jan 29 – Feb 2 (offset uncorrected)</td>
+<td><strong>97.1%</strong></td>
+</tr>
+<tr>
+<td>Feb 13 – Mar 17 (after the fix)</td>
+<td><strong>3.6%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>A 97% active rate is physically impossible for this site (the alcove is a minority
+destination off a busy sidewalk). Those five days' <strong>active/passive labels are invalid</strong> —
+people were detected, but mis-zoned.</p>
+<p><img src="diagrams/png/F2_calibration_artifact.png" alt="Figure F2 — active-zone share of detections across the run: a red ~95-98% plateau before Feb 12 (offset uncorrected, physically impossible) collapsing to a realistic ~1-12% band after the calibration fix, with re-estimated (warm) and measured (black) points" />
+<em>Figure F2 — the artifact made visible: the impossible early &quot;active&quot; spike and its
+correction.</em> The split was <strong>re-estimated</strong> (clearly flagged) by
+matching each early hour to the measured active share of the <strong>same weekday + hour</strong> in the
+valid post-fix window, which yields a believable 2.4–3.9%. Stored as
+<code>hourly_stats_corrected</code>, preserving the originals in <code>active_orig</code>/<code>passive_orig</code> plus an
+<code>estimated</code> flag. <em>(A separate pre-V6 bug produced impossible raw <code>z</code> values up to 26 km on
+Feb 23–24 — filtered by the zone logic, but a reason to trust aggregated ratios over raw
+coordinates for early dates.)</em></p>
+<h3 id="18e-the-feb-3-9-gap-pruned-from-the-db-recovered-from-the-reports">18e. The Feb 3–9 gap — pruned from the DB, recovered from the reports</h3>
+<p>Both databases were missing <strong>Feb 3–9</strong> entirely (raw events self-prune at 48 h). But the
+<strong>daily-report JSON files</strong> generated at the time preserved full <strong>24-hour breakdowns</strong> for
+every one of those days. The reports are a frozen snapshot of data the database no longer
+holds — the <strong>tiered-retention design</strong> (raw → hourly aggregate → daily report) doing
+exactly what it was meant to. Those 7 days were ingested back in (168 hours, <strong>~3.0 M
+events</strong>, tagged <code>src='report'</code>), giving <strong>continuous coverage with no gaps</strong>:</p>
+<p><img src="diagrams/png/F3_report_recovery.png" alt="Figure F3 — tiered retention recovered the lost week: raw events (48h) roll up to hourly_stats (in DB) and a nightly daily-report JSON (on disk); Feb 3-9 were pruned from the DB but survived in the reports and were re-ingested into a continuous run" />
+<em>Figure F3 — how the lost week was recovered: the daily reports outlived the raw data they
+were derived from.</em></p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Days</th>
+<th>Events</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>early (DB)</td>
+<td>14</td>
+<td>2.47 M</td>
+</tr>
+<tr>
+<td><strong>report (recovered)</strong></td>
+<td><strong>7</strong></td>
+<td><strong>3.04 M</strong></td>
+</tr>
+<tr>
+<td>late (DB)</td>
+<td>29</td>
+<td>17.80 M</td>
+</tr>
+<tr>
+<td><strong>total</strong></td>
+<td><strong>48</strong></td>
+<td><strong>23.3 M</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The authoritative run-wide table is <strong><code>hourly_stats_filled</code></strong> (continuous,
+provenance-tagged, artifact-corrected).</p>
+<h3 id="18f-what-this-means-for-claims-amp-figures">18f. What this means for claims &amp; figures</h3>
+<ul>
+<li><strong>Solid:</strong> &quot;~23 million tracking events&quot;; &quot;ran continuously for ~54 days&quot;; the
+software-version timeline; the personality drift (E3, from config not DB).</li>
+<li><strong>Estimated (label it):</strong> the Jan 29–Feb 12 active/passive split; the Feb 3–9 day values
+(from reports, not live DB).</li>
+<li><strong>Do not claim from this data:</strong> the &quot;162 meta-reviews&quot; count (<code>meta_tuning_reviews</code> is
+empty in both DBs); per-visit dwell sessions (<code>person_sessions</code> empty).</li>
+<li><strong>Before/after evolution (E5):</strong> use <strong>Feb 13–24 (early, V4/V5)</strong> vs <strong>Mar 5–16 (late,
+V6.5)</strong> — both valid windows. Note the change reflects <strong>both learning and version
+evolution</strong>; that is the honest story of a live, developing system, not a flaw.</li>
+</ul>
+<h3 id="18g-why-it-belongs-in-the-narrative">18g. Why it belongs in the narrative</h3>
+<p>The cleanest framing is not to apologise for the gaps but to foreground them: this was an
+<strong>adaptive installation built while it ran</strong>, where the instrument matured alongside the
+artwork, where a calibration error was caught and corrected mid-run, and where the system's
+own daily reporting <strong>recovered data its database had pruned</strong>. For a project about a system
+that learns and evolves in public, the data's own messy, self-healing history is part of
+the contribution — evidence of a real deployment, not a demo.</p>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DropCeiling — Data & Findings</title>
+  <meta name="description" content="An open record of a 54-day adaptive AR installation: 12 LED panels in a Toronto storefront window that respond to pedestrians, with the run data, diagrams, and findings all in one place.">
+  <meta name="theme-color" content="#fafaf8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23fafaf8'/><circle cx='8' cy='8' r='3' fill='%23e8a23d'/></svg>">
+  <link rel="stylesheet" href="styles/main.css?v=20260610">
+</head>
+<body>
+  <a class="skip-link" href="#start">Skip to content</a>
+
+  <header class="mobile-header">
+    <a href="#start" class="brand compact"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+    <button class="menu-button" type="button" aria-expanded="false">Menu</button>
+  </header>
+  <div class="backdrop"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <a href="#start" class="brand"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+      <p class="sidebar-summary">An open record of a 54-day adaptive AR installation. Data, diagrams, and findings — all in one place.</p>
+
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="#start">Start</a>
+        <a href="#story">Story</a>
+        <a href="#findings-g">Findings · G</a>
+        <a href="#findings-h">Findings · H</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#figures">Figures</a>
+        <a href="#data">Data</a>
+        <a href="#publications">Publications</a>
+        <a href="#about">About</a>
+      </nav>
+
+      <div class="sidebar-actions">
+        <a href="https://thedropceiling.com" class="external-link">Live installation</a>
+        <a href="https://github.com/npuckett/dc-dev" class="external-link">Source code</a>
+        <a href="https://github.com/npuckett/Drop-Ceiling" class="external-link">Project home</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- ============== #start ============== -->
+    <section id="start" class="content-section hero-section">
+      <span class="eyebrow">Data &amp; Findings</span>
+      <h1>An open record of an <span class="light">adaptive light</span> that learned over fifty-four days.</h1>
+      <p class="hero-copy">DropCeiling is twelve LED panels in a Toronto storefront window that respond to pedestrians — with the run data, the diagrams, and the findings all preserved and reproducible. This site is the analysis; the live installation is at <a href="https://thedropceiling.com" class="external-link" style="color:var(--ink); text-decoration:underline;">thedropceiling.com</a>.</p>
+
+      <div class="signal-grid">
+        <div class="signal-card">
+          <span class="label">Honest</span>
+          <span class="name">Provenance preserved</span>
+          <p>Every chart on this site can show or hide estimated data, report-recovered weeks, and the calibration artifact. Nothing is hidden; everything is labelled.</p>
+        </div>
+        <div class="signal-card">
+          <span class="label">Open</span>
+          <span class="name">Every figure links to its source</span>
+          <p>The 58 rendered diagrams all come from the same SQLite database. The data the site fetches is downloadable as JSON.</p>
+        </div>
+        <div class="signal-card">
+          <span class="label">Two readings</span>
+          <span class="name">G + H findings</span>
+          <p>Two independent analyses of the merged run database. Eleven findings on what the system did; ten on how the tuner actually behaved.</p>
+        </div>
+      </div>
+
+      <div class="hero-media" style="margin-top:48px;">
+        <div class="hero-image-wrap">
+          <img class="hero-image" src="assets/photos/P1_installation_photo.jpg" alt="The DropCeiling installation in the Haworth window at night" loading="eager">
+        </div>
+        <p class="image-credit">The installation in the Haworth window at night. Photo: project archive.</p>
+      </div>
+
+      <div class="note-band" style="margin-top:34px;">
+        <strong>What you'll find here.</strong> The distilled narrative playbook; the G- and H-series findings; the architecture (the 18-section master reference); the figure catalog; the data section (1,063 hours of run aggregates); the publication roadmap.
+      </div>
+    </section>
+
+    <!-- ============== #story ============== -->
+    <section id="story" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Story</span>
+        <h2>The story, and how to tell it.</h2>
+        <p>The distilled version. The full working reference is the 18-section diagram guide (under <a href="#architecture">Architecture</a>); this section keeps only what proved to work — the narrative moves that explain the project best, the figures that carry them, and the numbers that hold up.</p>
+      </div>
+      <div id="story-content"></div>
+    </section>
+
+    <!-- ============== #findings-g ============== -->
+    <section id="findings-g" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Findings · G</span>
+        <h2>Fresh findings from the run data.</h2>
+        <p>An independent re-analysis of the full merged database: how the system actually changed, how the light lived, and what the street did. Eleven findings, each with the data behind it, a figure, and a one-sentence claim.</p>
+      </div>
+      <div id="findings-g-content"></div>
+    </section>
+
+    <!-- ============== #findings-h ============== -->
+    <section id="findings-h" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Findings · H</span>
+        <h2>A second reading.</h2>
+        <p>Ten figures the G-series didn't build, from the per-cycle tuner behaviour (217K rows), the surviving meta-review (verbatim), the 48-day brightness curve, the mode-by-day entropy, the spatial footprint of each mode, the gesture spatial map, the parameter correlation structure, and the empirical regime-conditional tuner deltas.</p>
+      </div>
+      <div id="findings-h-content"></div>
+    </section>
+
+    <!-- ============== #architecture ============== -->
+    <section id="architecture" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Architecture</span>
+        <h2>The whole system, in pieces.</h2>
+        <p>The A-series diagrams (Mermaid-rendered Mermaid, or static SVG where Mermaid is weaker) cover the system end to end: the pipeline, the three nested loops, the meta-parameters, the modes, the trend windows, the self-tuning feedback, the budget, the database, real-time ingestion, and the web interface. For the long-form 18-section master reference, see <a href="architecture/index.html">the architecture page</a>.</p>
+      </div>
+
+      <div class="figure-block">
+        <figure>
+          <img src="assets/diagrams/A0_master_overview.svg" alt="A0 master overview — pipeline + three nested loops + point-light output" loading="lazy">
+          <figcaption><strong>Figure A0.</strong> Master overview — pipeline + three nested loops + the point-light output (the canonical system diagram).</figcaption>
+        </figure>
+      </div>
+
+      <h3>Three nested loops</h3>
+      <p>The single most load-bearing explanation: three control loops at three timescales. <strong>Reaction</strong> (~33 ms — modes and gestures follow who is present now), <strong>anticipation</strong> (seconds–hours — trend windows pre-position the light), <strong>self-tuning</strong> (hours–days — the meta-review reshapes the twelve meta-parameters). The key sentence: <em>only the innermost loop ever writes the light; each outer loop sets the terms for the one inside it.</em></p>
+      <div class="figure-block">
+        <figure>
+          <img src="assets/diagrams/A2_nested_loops.svg" alt="A2 three nested loops" loading="lazy">
+          <figcaption><strong>Figure A2.</strong> Three nested control loops. <a href="architecture/index.html#the-three-nested-loops">Read the full section →</a></figcaption>
+        </figure>
+      </div>
+
+      <h3>Self-tuning feedback</h3>
+      <p>PUSH (what the tuner senses) · RESIST (the friction stack: mean-reversion, step clamp, budget, value clamp) · META (the 3×/day review that re-governs the rules). A +0.050 nudge to <code>energy</code> becomes a +0.012 step after friction. The <a href="assets/diagrams/A7_self_tuning_feedback_bw.svg" class="external-link">greyscale version (A7-bw)</a> is the canonical ACADIA submission figure.</p>
+      <div class="figure-block">
+        <figure>
+          <img src="assets/diagrams/A7_self_tuning_feedback_bw.svg" alt="A7 self-tuning feedback (greyscale)" loading="lazy">
+          <figcaption><strong>Figure A7-bw.</strong> Self-tuning feedback loop in greyscale + warm accent. <a href="architecture/index.html#self-tuning-loop-and-the-interaction-budget">Read the full section →</a></figcaption>
+        </figure>
+      </div>
+
+      <h3>The output funnel</h3>
+      <p>The strongest single idea: a city corner's worth of context collapses, thirty times a second, to the state of one virtual point light (~9 values), from which each of 12 panels brightens by distance. Twenty-three million tracking events distilled live into twelve values of light.</p>
+      <div class="figure-block">
+        <figure>
+          <img src="assets/diagrams/C1_funnel_to_12_bw.svg" alt="C1 the funnel" loading="lazy">
+          <figcaption><strong>Figure C1-bw.</strong> The whole adaptive system collapses to 12 light values. <a href="architecture/index.html#meta-parameters-and-the-output-funnel">Read the full section →</a></figcaption>
+        </figure>
+      </div>
+
+      <h3>The database</h3>
+      <p>Three tiers: raw 48h, hourly (∞), daily report. A week of data the database pruned was recovered intact from the system's own daily reports — the tiered retention saving its own history.</p>
+      <div class="figure-block">
+        <figure>
+          <img src="assets/diagrams/B1_db_funnel.svg" alt="B1 tiered DB funnel" loading="lazy">
+          <figcaption><strong>Figure B1.</strong> Tiered database funnel. <a href="architecture/index.html#the-database-tiered-memory">Read the full section →</a></figcaption>
+        </figure>
+      </div>
+
+      <div class="btn-row" style="margin-top:28px;">
+        <a class="primary-link" href="architecture/index.html">Read the full 18-section architecture reference →</a>
+      </div>
+    </section>
+
+    <!-- ============== #figures ============== -->
+    <section id="figures" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Figures</span>
+        <h2>All 58 figures, filterable.</h2>
+        <p>The full catalog — every rendered SVG across the A-, A7.x-, B-, C-, D-, E-, F-, G-, and H-series. Search by name, filter by series, click through to the source.</p>
+      </div>
+      <div data-catalog>
+        <div class="filter-panel">
+          <label>Search <input type="text" data-catalog-search placeholder="e.g. funnel, brightness, aggression"></label>
+          <label>Series <select data-catalog-series><option value="">All</option><option>A</option><option>A7.x</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select></label>
+        </div>
+        <p class="catalog-status" data-catalog-status></p>
+        <div class="figure-grid" data-catalog-grid></div>
+      </div>
+      <div class="btn-row" style="margin-top:24px;">
+        <a class="secondary-link" href="figures/index.html">Open the full catalog in its own page →</a>
+      </div>
+    </section>
+
+    <!-- ============== #data ============== -->
+    <section id="data" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Data</span>
+        <h2>The 48-day run, downloadable.</h2>
+        <p>1,063 hourly rows + 48 daily rows + run-wide metadata. All in plain JSON, served same-origin from this site. Provenance flags preserved: <code>src</code> (early / late / report-recovered), <code>est</code> (estimated vs measured).</p>
+      </div>
+      <div id="data-summary"></div>
+      <div class="chart-block" id="chart-hourly">
+        <h3>Hourly events — the whole run, 1,063 hours</h3>
+        <p style="color:var(--muted); font-size:0.92rem;">Each bar is one hour. Black = measured; grey = estimated; warm = the report-recovered week (Feb 3–9).</p>
+        <div class="chart-wrap" data-chart="hourly-strip" data-width="800" data-height="140"><p class="chart-loading">Loading…</p></div>
+      </div>
+      <div class="chart-block" id="chart-daily">
+        <h3>Daily people — 48 days</h3>
+        <p style="color:var(--muted); font-size:0.92rem;">The mid-week office peak; Tuesday 21.2K is the busiest day; Friday ≈ Saturday is a contemporary detail of the hybrid-work financial district.</p>
+        <div class="chart-wrap" data-chart="daily-totals" data-width="800" data-height="200"><p class="chart-loading">Loading…</p></div>
+      </div>
+      <div class="chart-block" id="chart-flow">
+        <h3>Flow direction by hour — the street breathes</h3>
+        <p style="color:var(--muted; font-size:0.92rem;">Aggregated across all 48 days. Mornings flow right-to-left into the district; afternoons reverse. <a href="assets/diagrams/G2_breathing_street.svg" class="external-link">See Finding 9 (G2) for the daily breakdown.</a></p>
+        <div class="chart-wrap" data-chart="flow-balance" data-width="800" data-height="380"><p class="chart-loading">Loading…</p></div>
+      </div>
+      <h3 style="margin-top:30px;">Honesty as a feature</h3>
+      <p>The data the site fetches carries provenance flags. The chart above already uses them (grey bars are estimated, warm bars are the report-recovered week). Three more notes you should know about the run:</p>
+      <div class="honesty-list">
+        <div class="honesty-item"><span class="marker">1.</span><div><strong>Calibration artifact (Jan 29 – Feb 2).</strong> An uncorrected tracking offset mapped ~97% of pedestrians into the active zone. The merge step estimates the active/passive split from a matched weekday+hour window after the Feb 12 fix; those 285 estimated hours are flagged in the JSON.</div></div>
+        <div class="honesty-item"><span class="marker">2.</span><div><strong>Feb 3 – 9 gap, recovered.</strong> The database pruned the 7 days of raw events; the daily-report JSONs generated at the time preserved them. 168 hours were ingested from those reports (tagged <code>src: "report"</code> in the JSON; shown in warm in the chart above).</div></div>
+        <div class="honesty-item"><span class="marker">3.</span><div><strong>One surviving meta-review.</strong> The "162 meta-reviews" count from earlier drafts is wrong — the audit table is empty in both source DBs. Only one row survives, dated Feb 13 10:23. See <a href="#findings-h">H2</a>.</div></div>
+      </div>
+      <h3 style="margin-top:30px;">Download</h3>
+      <div class="btn-row">
+        <a class="primary-link" href="https://raw.githubusercontent.com/npuckett/DropCeiling-Data/main/web_data/hourly.json" target="_blank" rel="noopener">hourly.json &nbsp;·&nbsp; 234 KB &nbsp;·&nbsp; 1,063 rows</a>
+        <a class="primary-link" href="https://raw.githubusercontent.com/npuckett/DropCeiling-Data/main/web_data/daily.json" target="_blank" rel="noopener">daily.json &nbsp;·&nbsp; 13 KB &nbsp;·&nbsp; 48 rows</a>
+        <a class="primary-link" href="https://raw.githubusercontent.com/npuckett/DropCeiling-Data/main/web_data/meta.json" target="_blank" rel="noopener">meta.json &nbsp;·&nbsp; 1.5 KB</a>
+      </div>
+      <p style="font-size:0.9rem; color:var(--muted); margin-top:14px;">Or browse the <a href="https://github.com/npuckett/DropCeiling-Data/tree/main/web_data" class="external-link">web_data folder on GitHub</a>.</p>
+    </section>
+
+    <!-- ============== #publications ============== -->
+    <section id="publications" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Publications</span>
+        <h2>Where this is going.</h2>
+        <p>Three planned venues, with the same seven narrative moves serving all three. The venue changes which move leads, not what the story is.</p>
+      </div>
+      <table>
+        <thead><tr><th>Outlet</th><th>Status</th><th>Spine</th></tr></thead>
+        <tbody>
+          <tr><td><strong>ACADIA 2026</strong> (Projects, 600 words)</td><td>submitted</td><td>the collapse to twelve + friction; <code>downloads/submission.docx</code></td></tr>
+          <tr><td><strong>TEI 2027</strong> (Pictorial, ≤12 pp, due Aug 6 2026)</td><td>planned</td><td>embodiment-led hybrid — body/duet → collapse foldout → 54-day drift</td></tr>
+          <tr><td><strong>Interactive diagram engine</strong> (web)</td><td>planned</td><td>static JSON aggregates on CDN, honesty toggles for estimated data</td></tr>
+        </tbody>
+      </table>
+      <h3>Downloads</h3>
+      <div class="btn-row">
+        <a class="primary-link" href="downloads/abstract.docx">ACADIA 2026 abstract (docx)</a>
+        <a class="primary-link" href="downloads/submission.docx">ACADIA 2026 full submission (docx)</a>
+        <a class="primary-link" href="downloads/projects-fieldnotes.docx">ACADIA 2026 projects + field notes (docx)</a>
+      </div>
+    </section>
+
+    <!-- ============== #about ============== -->
+    <section id="about" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">About</span>
+        <h2>Credits &amp; license.</h2>
+      </div>
+      <p><strong>Nick Puckett</strong> — design, runtime, analysis. <strong>Joshua Pothen</strong> — design collaborator. The system was developed with AI coding agents working against a shared 3D model of the site.</p>
+      <p>This site is MIT-licensed. The data is yours to use; the figures are yours to cite. If a diagram helps your work, please cite the ACADIA submission.</p>
+      <p style="margin-top:30px;"><a href="https://github.com/npuckett/DropCeiling-Data" class="external-link" style="color:var(--ink);">View the source markdown on GitHub</a> (the <code>_source/</code> folder has all 10 narrative .md files; <code>examples/homepage/_rendered/</code> has the rendered HTML).</p>
+    </section>
+
+    <footer class="site-footer">
+      <p>DropCeiling — Data &amp; Findings &nbsp;·&nbsp; <a href="LICENSE">MIT license</a></p>
+      <p>Source on <a href="https://github.com/npuckett/DropCeiling-Data" class="external-link">GitHub</a> &nbsp;·&nbsp; Live installation at <a href="https://thedropceiling.com" class="external-link">thedropceiling.com</a></p>
+    </footer>
+  </main>
+
+  <script src="scripts/data.js?v=20260610"></script>
+  <script src="scripts/charts.js?v=20260610"></script>
+  <script src="scripts/nav.js?v=20260610"></script>
+  <script src="scripts/filter.js?v=20260610"></script>
+  <script>
+  /* Inline the rendered HTML fragments at load time. */
+  (function () {
+    function inject(id, file) {
+      fetch(file).then(function (r) { return r.text(); }).then(function (html) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      }).catch(function (e) { console.error("Failed to load " + file, e); });
+    }
+    inject("story-content",     "_rendered/story.html");
+    inject("findings-g-content", "_rendered/findings-g.html");
+    inject("findings-h-content", "_rendered/findings-h.html");
+
+    /* Load data + render the data section widgets. */
+    if (window.DC_loadData) {
+      var dataBase = (function () {
+        // Resolve web_data URL relative to the current page.
+        // /examples/homepage/index.html -> ../../web_data/
+        return "../../web_data/";
+      })();
+      window.DC_loadData(dataBase).then(function (D) {
+        // Summary cards
+        var sum = document.getElementById("data-summary");
+        if (sum && D.meta && D.meta.run) {
+          var r = D.meta.run;
+          sum.innerHTML =
+            '<div class="four-up">' +
+              '<div class="summary-card"><span class="label">Total events</span><span class="value warm">' + (r.total_events / 1e6).toFixed(1) + 'M</span><span class="sub">across ' + r.hours_present + ' hours</span></div>' +
+              '<div class="summary-card"><span class="label">Days</span><span class="value">' + r.days_present + '</span><span class="sub">' + r.start + ' → ' + r.end + '</span></div>' +
+              '<div class="summary-card"><span class="label">Blooms</span><span class="value">' + r.total_blooms + '</span><span class="sub">engagement-acknowledgment events</span></div>' +
+              '<div class="summary-card"><span class="label">Unique people (ceiling)</span><span class="value">' + (r.unique_people_ceiling / 1000).toFixed(0) + 'K</span><span class="sub">uniques are per-hour; summed is a ceiling</span></div>' +
+            '</div>';
+        }
+        // Charts
+        function run() {
+          if (!window.DC_charts) { setTimeout(run, 50); return; }
+          var hourlyEl = document.querySelector('[data-chart="hourly-strip"]');
+          if (hourlyEl && D.hourly) window.DC_charts.renderHourlyStrip(hourlyEl, D.hourly);
+          var dailyEl = document.querySelector('[data-chart="daily-totals"]');
+          if (dailyEl && D.daily) window.DC_charts.renderDailyTotals(dailyEl, D.daily);
+          var flowEl = document.querySelector('[data-chart="flow-balance"]');
+          if (flowEl && D.hourly) window.DC_charts.renderFlowBalance(flowEl, D.hourly);
+        }
+        run();
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

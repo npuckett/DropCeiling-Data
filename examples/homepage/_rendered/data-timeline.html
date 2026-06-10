@@ -1,0 +1,360 @@
+<h1 id="drop-ceiling-run-data-merge-coverage-amp-change-timeline">Drop Ceiling — Run Data: Merge, Coverage &amp; Change Timeline</h1>
+<p><em>Reference for all longitudinal analysis. Built from two intact database copies found on
+the Desktop dc-dev repo. The installation's software changed continuously over the run, so
+<strong>what was captured changed too</strong> — this document records when, so figures and claims can
+be framed honestly.</em></p>
+<hr />
+<h2 id="1-source-databases-both-integrity-checked-clean-no-corruption">1. Source databases (both integrity-checked: clean, no corruption)</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Path</th>
+<th>Size</th>
+<th>hourly_stats span</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>late</strong></td>
+<td><code>~/Desktop/dc-dev/tracking_history.db</code></td>
+<td>628 MB</td>
+<td>Jan 29–Feb 2, <strong>Feb 25–Mar 17</strong></td>
+<td>late run</td>
+</tr>
+<tr>
+<td><strong>early</strong></td>
+<td><code>~/Desktop/dc-dev/IO/tracking_history.db</code></td>
+<td>487 MB</td>
+<td><strong>Feb 12–25</strong></td>
+<td>early run</td>
+</tr>
+</tbody>
+</table>
+<p>Both pass <code>PRAGMA integrity_check</code> = <code>ok</code>. <strong>Schemas are identical</strong> across all tables, so
+a clean union was safe. They are <strong>complementary, not duplicates</strong>: the early DB fills the
+Feb 12–24 window the late DB is missing.</p>
+<h2 id="2-merged-database">2. Merged database</h2>
+<p><code>IO/analysis/merged_run.db</code> (read-only analysis copy; originals untouched). Built by
+<code>ATTACH</code>-ing both and unioning, deduplicating overlapping days/timestamps (preferring the
+row with more events). Carries a <code>src</code> column (<code>early</code>/<code>late</code>) on every row for provenance.</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Merged rows</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hourly_stats</code></td>
+<td>895</td>
+<td><strong>41 distinct days</strong>, Jan 29 → Mar 17</td>
+</tr>
+<tr>
+<td><code>daily_stats_v2</code></td>
+<td>40</td>
+<td>per-day rollups</td>
+</tr>
+<tr>
+<td><code>behavior_adjustments</code></td>
+<td>217,285</td>
+<td>the tuner's audit trail</td>
+</tr>
+<tr>
+<td><code>light_behavior</code></td>
+<td>172,125</td>
+<td>light's own state log (sparse — see §5)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>True run totals (from merged <code>hourly_stats</code>):</strong></p>
+<ul>
+<li><strong>Tracking events: ~20.3 million</strong> (was estimated ~15M — the real number is higher).</li>
+<li>Total blooms: 1,523.</li>
+<li><em>Unique people:</em> summing per-hour uniques gives 536,693, but that <strong>over-counts</strong> anyone
+seen across multiple hours, so it is a ceiling, not the headline figure. The &quot;~1 million
+visitors&quot; claim should be sourced/qualified separately, not from this sum.</li>
+</ul>
+<h2 id="3-day-by-day-coverage-41-days-present-of-a-48-day-span">3. Day-by-day coverage (41 days present of a ~48-day span)</h2>
+<pre><code>Jan 29 ████  (15h)        ─┐ early days (V2-era)
+Jan 30–Feb 01 ████ (24h)   │
+Feb 02 ██ (16h)           ─┘
+Feb 03–09  ✗ MISSING (7-day gap)
+Feb 10–11  ▏ (2h each, trace only)
+Feb 12 ▌ (10h)  ← both DBs; DB &quot;fixed corrupt database&quot; commit this day
+Feb 13–24 ████ (24h)      ─ early-run continuous block (V4/V5-era)
+Feb 25 ████ (24h)  ← handoff: both DBs cover this day
+Feb 26–Mar 16 ████ (24h)  ─ late-run continuous block (V5→V6→V6.5-era)
+Mar 17 ████ (10h)  ← run ends
+</code></pre>
+<p><strong>Two real discontinuities:</strong></p>
+<ul>
+<li><strong>Feb 3–9 gap (7 days):</strong> no aggregates. Cause not yet confirmed (downtime, or data lost
+in the pre-Feb-12 corruption). Treat the run as <strong>two continuous blocks</strong> (late-Jan +
+Feb-12-onward) rather than one unbroken 54-day line, unless downtime is confirmed benign.</li>
+<li><strong>Feb 10–12 trace:</strong> 2-hour days, then the <strong>&quot;fixed corrupt database&quot; fix on Feb 12</strong>
+(git), after which capture is continuous. Your recollection of a corruption issue is
+correct — it sits right here, and the early DB starts clean from Feb 12.</li>
+</ul>
+<h2 id="4-what-was-captured-changed-over-the-run-the-capture-timeline">4. What was captured changed over the run (the capture-timeline)</h2>
+<p>The data records the software's own evolution. Key transitions, cross-checked against git:</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Data shows</th>
+<th>Git / software change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>~Jan 27–28</strong></td>
+<td>run begins; &quot;active/passive&quot; fixes</td>
+<td><code>massive V2 update</code>, <code>fixes to active passive</code></td>
+</tr>
+<tr>
+<td><strong>Feb 11–12</strong></td>
+<td>trace days, then capture stabilises</td>
+<td><code>v4 update</code>, <strong><code>fixed corrupt database</code></strong> (Feb 12)</td>
+</tr>
+<tr>
+<td><strong>Feb 23</strong></td>
+<td><strong><code>light_behavior</code> logging begins</strong>; the full <strong>mode</strong> vocabulary (idle/flow/engaged/crowd) and <strong>13 gestures</strong> first appear in the DB</td>
+<td>V5-era behaviour system with gestures/dwell</td>
+</tr>
+<tr>
+<td><strong>Feb 25</strong></td>
+<td><code>sweep</code> gesture first appears</td>
+<td><code>v5 update</code> (anisotropic falloff + SWEEP/FOCUS)</td>
+</tr>
+<tr>
+<td><strong>Mar 02</strong></td>
+<td>brief <code>light_behavior</code> rows (227) — redeploy churn</td>
+<td><code>the big v6 update</code>, <code>V6.1*</code> stabilisation</td>
+</tr>
+<tr>
+<td><strong>Mar 03</strong></td>
+<td>three-tier passive behaviour lands</td>
+<td><code>V6.5: Passive-flow-driven behavior with three tiers</code></td>
+</tr>
+<tr>
+<td><strong>Mar 04</strong></td>
+<td>data-driven movement</td>
+<td><code>V6.5c</code></td>
+</tr>
+<tr>
+<td><strong>Mar 15</strong></td>
+<td><strong><code>aware</code> mode first appears</strong> in data; <code>playful</code> gesture first logged</td>
+<td>V6.5 three-tier (IDLE/FLOW/<strong>AWARE</strong>) reaching steady logging</td>
+</tr>
+<tr>
+<td><strong>Mar 16</strong></td>
+<td><code>focus</code> gesture first logged</td>
+<td>late V6.5 gesture set complete</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Implications for figures/claims:</strong></p>
+<ul>
+<li><strong>Mode vocabulary is not constant.</strong> <code>aware</code> only exists from <strong>Mar 15</strong>; before that the
+light had four modes, not five. Any mode-distribution figure must either span only the
+V6.5 window or annotate the change.</li>
+<li><strong>Gesture vocabulary grew over the run</strong> (13 gestures Feb 23 → +sweep Feb 25 → +playful
+Mar 15 → +focus Mar 16). &quot;16 gestures&quot; describes the <em>final</em> system, not the whole run.</li>
+<li><strong><code>light_behavior</code> (the light's own state log) is sparse and intermittent</strong> — only ~8
+days have substantial rows (Feb 23–25, Mar 15–17). Self-analysis / light-state figures
+(position entropy, gesture frequency over time) can only be built for those windows, not
+the full run.</li>
+</ul>
+<h2 id="5-what-is-and-isn-t-buildable-from-this-data">5. What is and isn't buildable from this data</h2>
+<table>
+<thead>
+<tr>
+<th>Figure / claim</th>
+<th>Buildable?</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>D1/D2 refresh</strong> (real run totals)</td>
+<td>✅</td>
+<td>merged <code>hourly_stats</code> (~20.3M events)</td>
+</tr>
+<tr>
+<td><strong>E4 24-hour rhythm</strong></td>
+<td>✅</td>
+<td><code>hourly_stats</code> by hour — pick a representative full V6.5 day</td>
+</tr>
+<tr>
+<td><strong>E5 week-1 vs week-7</strong> (activity/flow/brightness)</td>
+<td>✅</td>
+<td><code>hourly_stats</code>/<code>daily_stats_v2</code>, early block vs late block</td>
+</tr>
+<tr>
+<td><strong>E5 via gesture variety / position entropy</strong></td>
+<td>⚠️ partial</td>
+<td>only Feb 23–25 vs Mar 15–17 (the two <code>light_behavior</code> windows)</td>
+</tr>
+<tr>
+<td>Personality drift (E3)</td>
+<td>✅ already built</td>
+<td>slider/override JSON (not DB-dependent)</td>
+</tr>
+<tr>
+<td>Per-person dwell sessions</td>
+<td>❌</td>
+<td><code>person_sessions</code> empty in both DBs</td>
+</tr>
+<tr>
+<td>&quot;162 meta-reviews&quot; count</td>
+<td>❌</td>
+<td><code>meta_tuning_reviews</code> empty (0 / 1 row) — <strong>don't cite this number</strong></td>
+</tr>
+<tr>
+<td>Raw position heatmaps</td>
+<td>⚠️</td>
+<td><code>tracking_events</code> only last ~3 days each DB (48h prune)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5b-calibration-artifact-jan-29-feb-2-active-counts-are-invalid">5b. CALIBRATION ARTIFACT — Jan 29–Feb 2 active counts are invalid</h2>
+<p>An uncorrected tracking offset early in the run mapped nearly every pedestrian into the
+<strong>active</strong> zone. The active-zone share confirms it unambiguously:</p>
+<table>
+<thead>
+<tr>
+<th>Window</th>
+<th>Active share</th>
+<th>Active / Passive</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Jan 29 – Feb 2</strong> (offset uncorrected)</td>
+<td><strong>97.1%</strong></td>
+<td>1,812,666 / 53,186</td>
+</tr>
+<tr>
+<td><strong>Feb 13 – Mar 17</strong> (after Feb-12 fix)</td>
+<td><strong>3.6%</strong></td>
+<td>338,411 / 9,043,709</td>
+</tr>
+</tbody>
+</table>
+<p>A 97% active share is physically impossible for this site (the alcove is a minority
+destination off a busy sidewalk). The offset shifted tracked positions into the active band
+(Z 78–283); after the <strong>Feb-12 &quot;fixed corrupt database&quot; / calibration fix</strong>, the split
+becomes realistic (~1–12% active). Corroboration: late-run raw <code>z</code> averages ~405–427 cm —
+correctly <em>out on the sidewalk</em>, well beyond the active zone — exactly what the early offset
+would have pulled inward.</p>
+<p><strong>Consequences:</strong></p>
+<ul>
+<li><strong>Exclude Jan 29–Feb 2 from all active-engagement metrics.</strong> They look like a flood of
+engagement but are a calibration error; including them overstates active-zone entries and
+would corrupt any before/after learning comparison.</li>
+<li>The valid active-engagement window is <strong>Feb 12/13 onward</strong>.</li>
+<li>Passive counts and total-event counts from the early days are less affected (people were
+still detected, just mis-zoned), but the <strong>zone label</strong> for Jan 29–Feb 2 is unreliable.</li>
+</ul>
+<p><strong>Separate bug (Feb 23–24):</strong> raw <code>z</code> max reaches 2,667,803 cm and 392,804 cm — impossible
+projection blow-ups from pre-V5/V6 calibration/fusion. Zone logic filters them, but they
+poison raw-position averages for those days. Prefer aggregated active/passive <em>ratios</em> over
+raw coordinate stats for any pre-V6 date.</p>
+<h2 id="5c-estimating-the-early-active-passive-split-and-the-alignment-figure">5c. Estimating the early active/passive split (and the alignment figure)</h2>
+<p>The Jan 29–Feb 12 active/passive labels are unrecoverable (raw positions long pruned), so
+they are <strong>re-estimated</strong> and clearly flagged, not left as the bad 97%:</p>
+<ul>
+<li><strong>Method.</strong> For each early hour, take its total detections and re-split them using the
+measured active share of the <strong>same weekday + same hour</strong> drawn from the valid post-fix
+window (Feb 13 – Mar 16). Fall back to same-hour, then global, when a cell is thin
+(&lt;500 events). The measured global post-fix active share is <strong>3.62%</strong>.</li>
+<li><strong>Result.</strong> Jan 29–Feb 2 active share drops from ~97% to a plausible <strong>2.4–3.9%</strong>,
+varying by weekday/hour. Stored in <code>merged_run.db</code> as <strong><code>hourly_stats_corrected</code></strong>, which
+keeps <code>active_orig</code> / <code>passive_orig</code> columns and an <strong><code>estimated</code></strong> flag (1 for
+date ≤ Feb 12, 0 otherwise). 117 hours flagged.</li>
+<li><strong>Status.</strong> This is a model for chart continuity, <strong>never a measurement</strong> — always label
+it &quot;estimated.&quot; Total event/people counts are unchanged; only the zone split is modelled.</li>
+</ul>
+<p><strong>Figure <code>F1_software_data_timeline</code></strong> renders the key talking point: daily capture
+(events/day, colour-coded measured / partial / estimated, with the Feb 3–9 gap) on a shared
+date axis above the <strong>software-version milestones</strong> (V2 → V4 → DB-fix Feb 12 → V5 → V6 →
+V6.5 → AWARE-in-data Mar 15). It makes visible that <strong>what the database captured tracked
+what the software could do</strong> — modes/gestures enter the data as versions add them.</p>
+<h2 id="5d-feb-3-9-gap-recovered-from-the-daily-report-archive">5d. Feb 3–9 gap RECOVERED from the daily-report archive</h2>
+<p>The 7-day gap (§3) existed only in the <strong>database</strong> — those days were pruned (48h raw
+retention), but the <strong>daily-report JSONs</strong> generated at the time (<code>reports/daily/</code>, present
+in the Desktop repo) preserve full <strong>24-hour breakdowns</strong> for every one of them. The
+reports are a frozen snapshot of data the DB no longer holds — an unintended benefit of the
+tiered-retention design (raw → hourly → daily report).</p>
+<ul>
+<li><strong>Ingested</strong> into <code>merged_run.db</code> as table <strong><code>hourly_stats_filled</code></strong> (= <code>hourly_stats_corrected</code>
+<ul>
+<li>168 report-derived hours, tagged <code>src='report'</code>, <code>estimated=1</code>). Active/passive split
+re-estimated by the §5c matched-share method, since the reports show <code>active=0</code>
+(early zone bug). Totals/flow come straight from the reports.</li>
+</ul>
+</li>
+<li><strong>Result: continuous coverage Jan 29 → Mar 17, no gaps.</strong> The recovered week adds
+<strong>~3.0 M events</strong> (~33K people). New run total: <strong>~23.3 M tracking events.</strong></li>
+</ul>
+<p><strong>Provenance of <code>hourly_stats_filled</code>:</strong></p>
+<table>
+<thead>
+<tr>
+<th>src</th>
+<th>days</th>
+<th>hours</th>
+<th>events</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>early</code> (DB, Feb 12–25)</td>
+<td>14</td>
+<td>310</td>
+<td>2.47 M</td>
+</tr>
+<tr>
+<td><code>report</code> (Feb 3–9, recovered)</td>
+<td>7</td>
+<td>168</td>
+<td>3.04 M</td>
+</tr>
+<tr>
+<td><code>late</code> (DB, late-Jan + Feb 25–Mar 17)</td>
+<td>29</td>
+<td>585</td>
+<td>17.80 M</td>
+</tr>
+<tr>
+<td><strong>total</strong></td>
+<td><strong>48</strong></td>
+<td><strong>1,063</strong></td>
+<td><strong>23.3 M</strong></td>
+</tr>
+</tbody>
+</table>
+<p>This is itself a talking point: the system's own reporting pipeline became the backup that
+recovered data its database had discarded. Figure <code>F1_software_data_timeline</code> now shows the
+recovered week hatched, with no gap.</p>
+<p><strong>Table to use for run-wide figures:</strong> <code>hourly_stats_filled</code> (continuous, provenance-tagged,
+artifact-corrected). Use <code>hourly_stats</code> for DB-only/measured-only views.</p>
+<h2 id="6-honest-framing-going-forward">6. Honest framing going forward</h2>
+<ul>
+<li>Lead scale claim: <strong>&quot;~20 million tracking events across the run&quot;</strong> is solid and now exact.</li>
+<li>The run is best described as <strong>continuous from Feb 12 to Mar 17</strong> (~34 days of dense data)
+plus a late-January opening block — not a single unbroken 54-day capture. The <em>install</em>
+ran ~54 days; the <em>data</em> has a documented gap. State whichever is true to the claim being
+made.</li>
+<li>The &quot;before/after&quot; story is real and well-supported: <strong>early block (Feb 13–24, V4/V5)</strong>
+vs <strong>late block (Mar 5–16, V6.5)</strong> — but note the <em>software differed</em> between them, so the
+change reflects <strong>both</strong> learning <em>and</em> version changes. That's not a flaw to hide; it is
+the actual story of an evolving live system, and worth stating plainly.</li>
+</ul>
+<hr />
+<p><em>Merged DB: <code>IO/analysis/merged_run.db</code>. Rebuild: see the merge script in session history
+or re-<code>ATTACH</code> both source DBs. Originals on Desktop are never modified.</em></p>

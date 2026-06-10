@@ -1,0 +1,149 @@
+<h1 id="drop-ceiling-plan-run-data-online-interactive-diagram-engine">Drop Ceiling — Plan: Run Data Online (Interactive Diagram Engine)</h1>
+<p><em>Plan of record for moving the run database online to power an interactive, web-based
+diagram engine. Written to be picked up later. The guiding principle: <strong>serve the data at
+the tier each use actually needs</strong> — don't ship a 479 MB database to do 260 KB of work.</em></p>
+<hr />
+<h2 id="1-the-core-insight-why-this-isn-t-quot-host-the-db-quot">1. The core insight (why this isn't &quot;host the .db&quot;)</h2>
+<p>The data splits into three tiers of wildly different size and access pattern:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Size</th>
+<th>Contents</th>
+<th>Who needs it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Aggregates</strong></td>
+<td><code>hourly_stats_filled</code> ≈ <strong>260 KB</strong> JSON (~40 KB gzipped); <code>daily_stats_v2</code> ≈ 10 KB</td>
+<td>per-hour / per-day rollups</td>
+<td><strong>~90% of diagrams</strong> (D1/D2, E4, F1–F3, rhythms, totals)</td>
+</tr>
+<tr>
+<td><strong>Behaviour / audit</strong></td>
+<td><code>behavior_adjustments</code> 217K rows + <code>light_behavior</code> 172K rows (the bulk of the 479 MB, mostly <code>adjustments_json</code> blobs)</td>
+<td>per-cycle tuning decisions, light-state log</td>
+<td>deep / interactive drill-downs only</td>
+</tr>
+<tr>
+<td><strong>Raw archive</strong></td>
+<td>full <code>merged_run.db</code> ≈ <strong>479 MB</strong> (raw <code>tracking_events</code> already pruned)</td>
+<td>everything</td>
+<td>download / provenance, <strong>not</strong> live querying</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vercel is right for the app, wrong for the .db.</strong> Serverless has no persistent disk;
+loading a 479 MB SQLite per invocation to answer &quot;give me hourly counts&quot; is pathological.
+So: static JSON on the CDN for aggregates, a hosted SQL service for the behaviour tables,
+object storage for the full-file archive.</p>
+<hr />
+<h2 id="2-target-architecture">2. Target architecture</h2>
+<pre><code>                         ┌─────────────────────────────┐
+   Browser (interactive  │  Vercel app (frontend + thin │
+   diagram engine) ──────│  API routes if needed)      │
+                         └──────────┬─────────┬─────────┘
+                                    │         │
+                fetch() static      │         │  query (only for drill-downs)
+                ▼                    ▼         ▼
+   ┌────────────────────┐  ┌──────────────────────┐  ┌───────────────────┐
+   │ /public/data/*.json│  │  Turso (hosted libSQL │  │ Cloudflare R2 / B2 │
+   │ aggregates (260 KB)│  │  / SQLite): behaviour  │  │ full merged_run.db │
+   │ — CDN, free, fast  │  │  + audit tables        │  │ (archive download) │
+   └────────────────────┘  └──────────────────────┘  └───────────────────┘
+        TIER 1 (build first)     TIER 2 (add if needed)     TIER 3 (backup)
+</code></pre>
+<p><strong>Build order: Tier 1 first, alone.</strong> It already covers every figure made so far. Add
+Tier 2 only when a diagram genuinely needs to query the 200K+ behaviour rows live. Tier 3 is
+just the Dropbox/R2 archive copy.</p>
+<hr />
+<h2 id="3-tier-1-static-json-aggregates-the-first-deliverable">3. Tier 1 — static JSON aggregates (the first deliverable)</h2>
+<h3 id="what-to-export-from-io-analysis-merged-run-db">What to export (from <code>IO/analysis/merged_run.db</code>)</h3>
+<ul>
+<li><strong><code>hourly_stats_filled</code></strong> → <code>hourly.json</code> — the authoritative continuous, provenance-tagged,
+artifact-corrected hourly series. <strong>Carry the flags</strong> (<code>src</code>, <code>estimated</code>, <code>active_orig</code>,
+<code>passive_orig</code>) so the front-end can be honest about data quality.</li>
+<li><strong><code>daily_stats_v2</code></strong> (+ a daily roll-up of the filled table) → <code>daily.json</code>.</li>
+<li>A small <strong><code>meta.json</code></strong>: run span, total events, day count, the software-version timeline
+(dates + labels, as in F1), the gap/artifact notes, the gesture/mode &quot;first appeared&quot;
+dates. This drives annotations and honesty toggles.</li>
+</ul>
+<h3 id="shape-keep-it-flat-and-small">Shape (keep it flat and small)</h3>
+<pre><code class="language-jsonc">// hourly.json
+[ { &quot;date&quot;:&quot;2026-03-10&quot;,&quot;hour&quot;:16,&quot;events&quot;:156176,&quot;people&quot;:3171,
+    &quot;active&quot;:1504,&quot;passive&quot;:76005,&quot;mode&quot;:&quot;aware&quot;,&quot;brightness&quot;:203,
+    &quot;ltr&quot;:52887,&quot;rtl&quot;:14701,&quot;src&quot;:&quot;late&quot;,&quot;est&quot;:0 }, ... ]
+</code></pre>
+<p>Gzip/Brotli handles the rest (~40 KB on the wire). No backend needed.</p>
+<h3 id="where-it-lives">Where it lives</h3>
+<ul>
+<li>Simplest: a <code>data/</code> folder in the Vercel app's <code>/public</code> (or GitHub Pages — the viewer is
+already deployed there). Static, cached at the edge, free, works offline.</li>
+</ul>
+<h3 id="front-end">Front-end</h3>
+<ul>
+<li>Plain <code>fetch()</code> + a charting lib: <strong>D3</strong> (max control for bespoke/interactive diagrams),
+<strong>Observable Plot</strong> (fast, declarative, great for exploratory), or <strong>Chart.js</strong> (simplest).
+Given the goal is a <em>bespoke diagram engine</em>, D3 or Plot.</li>
+<li>Re-implement the existing figures (D/E/F) as interactive versions reading <code>hourly.json</code>.</li>
+</ul>
+<h3 id="honesty-as-a-feature-differentiator">Honesty as a feature (differentiator)</h3>
+<p>Bake the provenance flags into the UI: toggles for &quot;show estimated days,&quot; &quot;highlight
+report-recovered week,&quot; annotations for when modes/gestures first appeared (§18). An
+interactive engine that <strong>shows its own data quality</strong> is more credible than one that hides
+it — and it's a natural story for the project.</p>
+<hr />
+<h2 id="4-tier-2-hosted-sql-only-if-when-drill-downs-need-it">4. Tier 2 — hosted SQL (only if/when drill-downs need it)</h2>
+<p>Trigger: a diagram needs to query individual rows live (e.g. &quot;every adjustment to <code>energy</code>
+on Mar 10,&quot; &quot;gesture frequency by hour from <code>light_behavior</code>&quot;).</p>
+<ul>
+<li><strong>First choice: Turso</strong> (hosted libSQL / SQLite) — the data <em>is</em> SQLite, generous free
+tier, edge-replicated, clean Vercel integration. Push only the tables/columns you query
+(strip <code>adjustments_json</code> to the few fields needed → well under free-tier size).</li>
+<li>Alternatives: <strong>Neon</strong> or <strong>Supabase</strong> (Postgres) if Postgres is preferred; both have
+good free tiers + Vercel integrations.</li>
+<li>Access via thin Vercel API routes (so the DB creds stay server-side) or Turso's edge SDK.</li>
+</ul>
+<p><strong>Pre-process before upload:</strong> explode the useful keys out of <code>adjustments_json</code> into real
+columns (param deltas, budget before/after/cost, gradients) so they're queryable without
+JSON parsing per row. ~50–100 MB once trimmed.</p>
+<hr />
+<h2 id="5-tier-3-full-file-archive-backup-provenance">5. Tier 3 — full-file archive (backup + provenance)</h2>
+<ul>
+<li>Keep the full <strong><code>merged_run.db</code> (479 MB)</strong> and the two source DBs (628 MB, 487 MB) in
+<strong>Dropbox</strong> (already planned) and optionally <strong>Cloudflare R2 / Backblaze B2 / S3</strong> as a
+public/downloadable &quot;source of truth.&quot;</li>
+<li><strong>Critical reminder:</strong> the DBs are <strong>gitignored</strong>, so GitHub does <strong>not</strong> back them up.
+The off-machine copy (Dropbox/R2) is the <em>only</em> backup of the run data. Keep it current.</li>
+</ul>
+<hr />
+<h2 id="6-concrete-next-steps-when-we-return">6. Concrete next steps (when we return)</h2>
+<ol>
+<li><strong>Write the export script</strong> (<code>IO/analysis/export_web_json.py</code>): reads <code>merged_run.db</code>,
+emits <code>hourly.json</code>, <code>daily.json</code>, <code>meta.json</code> with flags. Idempotent; re-runnable when
+data updates.</li>
+<li><strong>Stand up the Vercel app skeleton</strong> (or reuse the existing GitHub Pages viewer):
+<code>/public/data/*.json</code> + a minimal page that fetches and renders one diagram (port D2 or
+E4 first as the proof).</li>
+<li><strong>Re-implement 1–2 figures interactively</strong> against the JSON to validate the pipeline.</li>
+<li><strong>Decide on Tier 2</strong> only after hitting a real drill-down need.</li>
+<li><strong>Confirm the Tier 3 archive</strong> (Dropbox copy of all DBs) is in place before relying on it.</li>
+</ol>
+<h3 id="open-decisions-to-make-then">Open decisions to make then</h3>
+<ul>
+<li>Charting lib: <strong>D3 vs Observable Plot</strong> (vs Chart.js for the simple ones).</li>
+<li>Host: <strong>Vercel app</strong> vs extend the <strong>existing GitHub Pages</strong> viewer (the live viewer
+already lives there — could co-locate).</li>
+<li>Whether the interactive engine is <strong>public</strong> or gated.</li>
+</ul>
+<hr />
+<h2 id="7-data-references-for-the-export-script">7. Data references (for the export script)</h2>
+<ul>
+<li>Authoritative table: <strong><code>IO/analysis/merged_run.db</code> → <code>hourly_stats_filled</code></strong> (continuous
+Jan 29 – Mar 17, 48 days, ~23.3 M events, provenance-tagged).</li>
+<li>Provenance/quality notes &amp; the software-version timeline: <strong><code>DATA_TIMELINE_AND_MERGE.md</code></strong>
+(this folder) and <strong>§18</strong> of <code>ACADIA_2026_DIAGRAM_GUIDE.md</code>.</li>
+<li>Existing static figures to port: <strong>D1/D2, E4, F1/F2/F3</strong> (<code>IO/diagrams/</code>).</li>
+</ul>

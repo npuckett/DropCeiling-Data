@@ -1,0 +1,401 @@
+<h1 id="dropceiling-fresh-findings-from-the-run-data">DropCeiling — Fresh Findings from the Run Data</h1>
+<p><em>An independent second analysis of the full merged database (Jun 2026), going past the
+first audit's coverage/quality work into the tables it never opened: the tuner's 217K-row
+decision log, the light's 172K-row life-log, the 33-day daily-learning record, and the raw
+position stream. Each finding states what the data shows, why it matters for publication,
+how to show it, and how to say it. Companion documents:
+<a href="DROPCEILING_STORY.md"><code>DROPCEILING_STORY.md</code></a> (the narrative playbook) and
+<a href="analysis/DATA_TIMELINE_AND_MERGE.md"><code>analysis/DATA_TIMELINE_AND_MERGE.md</code></a> (data
+provenance). Some findings below <strong>revise</strong> the earlier story — noted where they do.</em></p>
+<hr />
+<h2 id="a-how-the-system-actually-changed">A. How the system actually changed</h2>
+<h3 id="finding-1-personality-change-was-punctuated-not-gradual-revises-the-drift-story">Finding 1 — Personality change was punctuated, not gradual ⚠️ revises the drift story</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G1_personality_trajectories.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G1_personality_trajectories.svg" alt="G1" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G1 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>The never-before-opened <code>autotune_daily_learnings</code> table holds <strong>33 daily snapshots of all
+twelve meta-parameters</strong> (Feb 12 – Mar 2, then zeros). The real trajectory:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Dates</th>
+<th>What the numbers do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Day-one chaos</strong></td>
+<td>Feb 12</td>
+<td>parameters pinned at their limits: exploration 1.00, attention 1.00, memory 0.00, brightness 3.05×, speed 1.63×</td>
+</tr>
+<tr>
+<td><strong>Taming</strong></td>
+<td>Feb 13–14</td>
+<td>everything converges within 48 h of the first self-review</td>
+</tr>
+<tr>
+<td><strong>The V4/V5 equilibrium</strong></td>
+<td>Feb 14–24</td>
+<td>a stable character held for 11 days: responsiveness ~0.53, energy ~0.48, brightness ~0.94×</td>
+</tr>
+<tr>
+<td><strong>Version step</strong></td>
+<td>Feb 25 (V5 update)</td>
+<td>a discrete shift to a calmer character: energy 0.48 → 0.38, responsiveness 0.53 → 0.45</td>
+</tr>
+<tr>
+<td><strong>Record ends</strong></td>
+<td>Mar 3 (V6)</td>
+<td>the new tuner stopped writing this table — zeros from here</td>
+</tr>
+</tbody>
+</table>
+<p>The earlier radar (E3) compared config endpoints (home 0.53 → deployed 0.83) and implied a
+smooth drift. The daily record shows the truth is more interesting: <strong>equilibria
+punctuated by software versions</strong>, with the final V6.5 character (0.83/0.77) reached in an
+era this table no longer recorded. Personality change and version change are entangled —
+which is the honest claim, and a better one.</p>
+<ul>
+<li><strong>Show it:</strong> a 33-day multi-line chart of the six personality parameters, with version
+dates as vertical rules — the steps will be visible at Feb 13, Feb 25, Mar 2. (Proposed
+figure <strong>G1</strong>; the data is extracted and ready.)<figure style="margin:10px 0 0; padding:0;"><a href="assets/diagrams/G1_personality_trajectories.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G1_personality_trajectories.svg" alt="G1" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G1 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure></li>
+<li><strong>Say it:</strong> <em>the personality did not drift; it settled, was re-settled by each version,
+and settled again.</em></li>
+</ul>
+<h3 id="finding-2-the-system-s-first-self-diagnosis-survives-verbatim">Finding 2 — The system's first self-diagnosis survives, verbatim</h3>
+<p>The single surviving <code>meta_tuning_reviews</code> row is the <strong>first time the system read its own
+history</strong> (Feb 13, 10:23). Its diagnosis: <em>&quot;memory floor-clamped 100%, responsiveness
+96.6%, energy 96.6%… brightness_global ceiling-clamped 96.6%… Activity rarely exceeds
+0.1 — target may be too high.&quot;</em> Its response: raise the homes, drop brightness home from
+1.2 to 0.93. The next day's data shows the equilibrium forming. Cause and effect, on the
+record.</p>
+<ul>
+<li><strong>Show it:</strong> quote the diagnosis as a typeset artifact (a &quot;diary entry&quot;) beside the
+Feb 12→14 trajectory from Finding 1.</li>
+<li><strong>Say it:</strong> <em>on its second morning the system noticed every part of its personality was
+pinned against a wall, and moved the walls.</em></li>
+</ul>
+<h3 id="finding-3-the-friction-had-two-opposite-regimes-refines-the-budget-story">Finding 3 — The friction had two opposite regimes ⚠️ refines the budget story</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G9_friction_regimes.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G9_friction_regimes.svg" alt="G9" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G9 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Parsing the budget telemetry inside <code>behavior_adjustments</code> (sampled across 217K rows):</p>
+<table>
+<thead>
+<tr>
+<th>Era</th>
+<th>Avg budget (of 200)</th>
+<th>% of cycles depleted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Feb 13–23 (V4)</td>
+<td><strong>~1.3</strong></td>
+<td><strong>84–88%</strong></td>
+</tr>
+<tr>
+<td>Feb 25 – Mar 2 (V5)</td>
+<td><strong>~200</strong></td>
+<td><strong>0%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>For eleven days the tuner lived in budget poverty — throttled almost every cycle. Then the
+V5 update reduced the tuner's appetite below the refill rate and the budget never bound
+again. A fixed friction constant was either suffocating or absent, depending on the
+controller around it. This is the <em>empirical motivation</em> for V6's design choice of letting
+the meta-review retune the budget itself — previously asserted, now demonstrated.</p>
+<ul>
+<li><strong>Show it:</strong> budget level over time (two flat regimes with a cliff at Feb 24–25), or a
+before/after pair of &quot;% cycles throttled.&quot;</li>
+<li><strong>Say it:</strong> <em>the same friction setting starved one version of the software and never
+touched the next; friction has to be tuned by something that can watch it work.</em></li>
+</ul>
+<hr />
+<h2 id="b-how-the-light-actually-lived">B. How the light actually lived</h2>
+<h3 id="finding-4-a-life-of-waiting-restructured-by-v6-5">Finding 4 — A life of waiting, restructured by V6.5</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G6_mode_budget.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G6_mode_budget.svg" alt="G6" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G6 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>From the light's own state log (172K ticks across two windows):</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>V5 era (Feb 23–25)</th>
+<th>V6.5 era (Mar 15–17)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>idle</td>
+<td><strong>69.7%</strong></td>
+<td><strong>48.6%</strong></td>
+</tr>
+<tr>
+<td>flow</td>
+<td>21.3%</td>
+<td>35.1%</td>
+</tr>
+<tr>
+<td>aware</td>
+<td>—</td>
+<td>6.7%</td>
+</tr>
+<tr>
+<td>engaged</td>
+<td>8.9%</td>
+<td>8.5%</td>
+</tr>
+<tr>
+<td>crowd</td>
+<td>0.2%</td>
+<td>1.1%</td>
+</tr>
+</tbody>
+</table>
+<p>Engagement stayed almost exactly constant (~8.5–9%). What V6.5 changed is <strong>how the light
+waits</strong>: twenty points of &quot;nothing&quot; became flow/aware — attending to passing traffic
+instead of wandering alone. The social fraction of a public installation's life may be
+nearly fixed by the site; the design question is the texture of the other 91%.</p>
+<ul>
+<li><strong>Show it:</strong> two stacked time-budget bars, V5 vs V6.5 (the idle→flow/aware shift is the
+whole figure).</li>
+<li><strong>Say it:</strong> <em>the redesign didn't make more people stop; it changed what the light did
+while it waited.</em></li>
+</ul>
+<h3 id="finding-5-the-gesture-economy-inverted-from-solitary-to-social">Finding 5 — The gesture economy inverted: from solitary to social</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G5_gesture_economy.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G5_gesture_economy.svg" alt="G5" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G5 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Top gestures by share of all gesture ticks:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>V5 era</th>
+<th>V6.5 era</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>#1</td>
+<td>thinking (31%)</td>
+<td><strong>welcome (24%)</strong></td>
+</tr>
+<tr>
+<td>#2</td>
+<td>curious (27%)</td>
+<td>thinking (16%)</td>
+</tr>
+<tr>
+<td>#3</td>
+<td>bored (21%)</td>
+<td>curious (12%)</td>
+</tr>
+<tr>
+<td>welcome's share</td>
+<td>6.3%</td>
+<td><strong>24.3%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>V5's light mostly performed <em>solitary</em> gestures — thinking, curious, bored. By V6.5 its
+most frequent gesture was <strong>welcome</strong>, with playful and sweep newly in the repertoire.
+(Total gesture volume also dropped ~3×, by design — the V6.5c park-state made stillness a
+choice.) Caveat to carry: the available vocabulary also grew between eras, so this is
+behaviour <em>and</em> repertoire change together.</p>
+<ul>
+<li><strong>Show it:</strong> two ranked gesture bars (V5 / V6.5) with welcome highlighted in the warm
+accent.</li>
+<li><strong>Say it:</strong> <em>it stopped talking to itself and started greeting people.</em></li>
+</ul>
+<h3 id="finding-6-the-brightness-ladder-engagement-is-legible-in-light">Finding 6 — The brightness ladder: engagement is legible in light</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G7_brightness_ladder.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G7_brightness_ladder.svg" alt="G7" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G7 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Average brightness by mode (V6.5 era) climbs monotonically: <strong>idle 30 → flow 92 → aware
+158 → engaged 221 → crowd 388</strong> (cap 600). Anyone on the sidewalk could, in principle,
+read the social state of the alcove from the window's glow. The output really is the
+12-value display the C-series describes, and it encodes one variable above all: how much
+attention is present.</p>
+<ul>
+<li><strong>Show it:</strong> a five-step ladder/staircase chart, warm accent rising.</li>
+<li><strong>Say it:</strong> <em>the panels are a single instrument that displays attention.</em></li>
+</ul>
+<h3 id="finding-7-engagement-is-fleeting-the-bond-was-rare-and-real">Finding 7 — Engagement is fleeting; the bond was rare and real</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G3_engagement_episodes.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G3_engagement_episodes.svg" alt="G3" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G3 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Reconstructing engagement episodes from <code>active_count</code> runs (V6.5 window): <strong>758
+episodes</strong>; median ≈ a walk-through; only <strong>10.7% lasted past the 3-second &quot;notice&quot;
+phase</strong>; <strong>12 episodes (1.6%) reached the 30-second &quot;bond&quot; phase</strong>. The longest: <strong>193
+seconds</strong>. The four-act dwell structure (notice → greet → engage → bond) was built for an
+audience of twelve — and that is exactly the right framing, not a failure: the
+architecture of deepening existed so that the rare person who stayed got somewhere to go.</p>
+<ul>
+<li><strong>Show it:</strong> an episode-duration distribution with the dwell-phase boundaries marked,
+the 12 bond episodes individually visible as dots.</li>
+<li><strong>Say it:</strong> <em>twelve people, over three days, stayed long enough to reach the final act —
+the system kept a structure ready for each of them.</em></li>
+</ul>
+<h3 id="finding-8-the-light-is-loneliest-at-4-am">Finding 8 — The light is loneliest at 4 AM</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G4_loneliest_hour.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G4_loneliest_hour.svg" alt="G4" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G4 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>The aggression (attention-seeking) signal, averaged by hour across 217K tuning cycles, is
+a clean <strong>mirror image of the traffic curve</strong>: highest at 03:00–05:00 (~0.16) when the
+street is empty, lowest through the working afternoon (~0.03) when it is full. The
+mechanism behaves exactly as designed — and reads as an emotional portrait: the urge to
+attract peaks precisely when no one is there to see it, held down at night only by the
+time-of-day caps.</p>
+<ul>
+<li><strong>Show it:</strong> aggression-by-hour and people-by-hour on one axis pair — two curves in
+opposite phase.</li>
+<li><strong>Say it:</strong> <em>the light wants attention most at four in the morning, when there is no one
+to give it.</em></li>
+</ul>
+<hr />
+<h2 id="c-what-the-street-did">C. What the street did</h2>
+<h3 id="finding-9-the-street-breathes-a-commute-tide-the-light-surfed">Finding 9 — The street breathes: a commute tide the light surfed</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G2_breathing_street.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G2_breathing_street.svg" alt="G2" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G2 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Flow directionality by hour (10.4M directional events, measured days): mornings run
+strongly <strong>right-to-left into the district</strong> (balance −0.33 at 08:00), afternoons reverse
+<strong>left-to-right homeward</strong> (+0.48 at 16:00 — the day's extreme). The evening tide is also
+~2× the volume of the morning one. The light's flow-following idle behaviour — drifting
+toward where people come from — was riding a genuine, measurable tide, not noise.</p>
+<ul>
+<li><strong>Show it:</strong> a diverging horizontal bar chart by hour (left = into the district, right =
+homeward). One of the strongest single figures in the dataset. (Proposed <strong>G2</strong>.)<figure style="margin:10px 0 0; padding:0;"><a href="assets/diagrams/G2_breathing_street.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G2_breathing_street.svg" alt="G2" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G2 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure></li>
+<li><strong>Say it:</strong> <em>the street inhales at eight and exhales at five, and the light leaned into
+each.</em></li>
+</ul>
+<h3 id="finding-10-tuesday-is-the-big-day-friday-is-half-gone">Finding 10 — Tuesday is the big day; Friday is half-gone</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G10_diary.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G10_diary.svg" alt="G10" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G10 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Day-of-week signature (measured full days): <strong>Tue 21.2K</strong> &gt; Thu 18.8K &gt; Wed 16.0K &gt; Mon
+15.4K &gt; <strong>Sat 14.0K ≈ Fri 14.0K</strong> &gt; Sun 11.2K people/day. The mid-week office peak is
+expected; <strong>Friday matching Saturday</strong> is the contemporary detail — a hybrid-work
+financial district, visible from a shop window.</p>
+<ul>
+<li><strong>Show it:</strong> a seven-bar week with Fri/Sat visually paired.</li>
+<li><strong>Say it:</strong> <em>by the count of passing bodies, Friday downtown is now a weekend day.</em></li>
+</ul>
+<h3 id="finding-11-the-desire-line-misses-the-alcove-by-design">Finding 11 — The desire line misses the alcove by design</h3><figure style="margin:18px 0; padding:0;"><a href="assets/diagrams/G8_desire_line.svg" target="_blank" rel="noopener"><img src="assets/diagrams/G8_desire_line.svg" alt="G8" loading="lazy" style="display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px;"></a><figcaption style="text-align:center; color:var(--muted); font-size:0.88rem; margin-top:6px;">Figure G8 &mdash; <a href="../figures/index.html" style="color:var(--ink);">view in catalog</a></figcaption></figure>
+<p>Raw position occupancy by depth (1.27M positions, Mar 15–17): pedestrians overwhelmingly
+travel the band <strong>z 300–500 cm</strong> (peak 350–400), the sidewalk's natural desire line. Only
+~6% of positions ever fall inside the active zone (z &lt; 283). This is the geometric ground
+truth under everything: the 3.6% active share, the rarity of engagement, the alcove as a
+deliberate <em>threshold</em> people must choose to cross. The site plan (B3) and this histogram
+are two views of the same fact — one drawn, one measured.</p>
+<ul>
+<li><strong>Show it:</strong> the Z-occupancy histogram laid directly over the B3 site plan, zones
+shaded; or a position heat-strip on the plan itself.</li>
+<li><strong>Say it:</strong> <em>the sidewalk has a desire line, and the installation lives just off it —
+engagement meant stepping out of the river.</em></li>
+</ul>
+<hr />
+<h2 id="d-instrument-caveats-discovered-carry-these-into-any-analysis">D. Instrument caveats discovered (carry these into any analysis)</h2>
+<ol>
+<li><strong>The <code>speed</code> column is a smoothing artifact</strong> — 86.8% of values sit under 40 cm/s with
+a flat tail (real walking ≈ 130 cm/s). The EMA position filter (α≈0.03) destroys true
+speed; early reports' <code>avg_speed</code> values (1,700+) are likewise meaningless. Don't use
+speed for claims; the <em>flow direction</em> counts remain valid.</li>
+<li><strong><code>autotune_daily_learnings</code> goes to zeros at V6</strong> (Mar 3) — the V6 tuner didn't feed
+it. The 33-day trajectory is V4/V5-era only; the V6.5 endpoint lives in config files.</li>
+<li>Already documented but bears repeating with the above: the Jan 29 – Feb 12 active/passive
+labels are estimates; Feb 3–9 day values come from report files; <code>aware</code> exists in data
+only from Mar 15.</li>
+</ol>
+<hr />
+<h2 id="e-publication-angles-this-opens">E. Publication angles this opens</h2>
+<table>
+<thead>
+<tr>
+<th>Angle</th>
+<th>Findings</th>
+<th>Venue fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The reality of public engagement</strong> — constant ~8.5% social fraction, 758 fleeting episodes, 12 bonds, the redesign changing the waiting not the stopping</td>
+<td>4, 7, 9, 11</td>
+<td>TEI / DIS / HCI — empirical, honest counterweight to engagement-success narratives</td>
+</tr>
+<tr>
+<td><strong>Adaptive systems in the wild</strong> — punctuated equilibrium, the two friction regimes, the first self-review, instrument co-evolution</td>
+<td>1, 2, 3, caveats</td>
+<td>systems/design-methods papers; pairs with §18's data story</td>
+</tr>
+<tr>
+<td><strong>The self-narrating machine</strong> — 33 days of <code>strategy_summary</code> texts: the system describing its own becoming in plain English (&quot;Energy decreased 0.94 → …&quot;)</td>
+<td>1, 2</td>
+<td>design-research / &quot;Algorithmic Fictions&quot;-type venues; also a beautiful pictorial text element: the diary entries set against the trajectory chart</td>
+</tr>
+<tr>
+<td><strong>A shop window as urban sensor</strong> — the breathing street, Tuesday-peak, Friday≈Saturday, the desire line</td>
+<td>9, 10, 11</td>
+<td>urban data / media architecture; standalone from the AI story</td>
+</tr>
+<tr>
+<td><strong>An emotional portrait in data</strong> — loneliest at 4 AM, the bond dozen, welcome overtaking thinking</td>
+<td>5, 7, 8</td>
+<td>the affective register for design audiences; strong captions for the TEI pictorial</td>
+</tr>
+</tbody>
+</table>
+<h2 id="f-new-figures-worth-building-in-house-style">F. New figures worth building (in house style)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Figure</th>
+<th>From</th>
+<th>Strength</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>G1</strong></td>
+<td>Personality trajectories, 33 days, version rules overlaid</td>
+<td>Finding 1</td>
+<td>replaces/extends E3 with the true story</td>
+</tr>
+<tr>
+<td><strong>G2</strong></td>
+<td>The breathing street — diverging flow-by-hour</td>
+<td>Finding 9</td>
+<td>strongest new single image</td>
+</tr>
+<tr>
+<td><strong>G3</strong></td>
+<td>Engagement episode durations + the 12 bonds</td>
+<td>Finding 7</td>
+<td>the honest-engagement centrepiece</td>
+</tr>
+<tr>
+<td><strong>G4</strong></td>
+<td>Aggression vs traffic, two curves in opposite phase</td>
+<td>Finding 8</td>
+<td>the 4 AM portrait</td>
+</tr>
+<tr>
+<td><strong>G5</strong></td>
+<td>Gesture economy, V5 vs V6.5 ranked bars</td>
+<td>Finding 5</td>
+<td>&quot;solitary → social&quot;</td>
+</tr>
+<tr>
+<td><strong>G6</strong></td>
+<td>Mode time-budget bars, V5 vs V6.5</td>
+<td>Finding 4</td>
+<td>the restructured waiting</td>
+</tr>
+<tr>
+<td><strong>G7</strong></td>
+<td>Brightness ladder by mode</td>
+<td>Finding 6</td>
+<td>simple, quantified, warm</td>
+</tr>
+<tr>
+<td><strong>G8</strong></td>
+<td>Z-occupancy over the site plan</td>
+<td>Finding 11</td>
+<td>drawn vs measured geometry</td>
+</tr>
+<tr>
+<td><strong>G9</strong></td>
+<td>Budget regimes (starved → never-binding)</td>
+<td>Finding 3</td>
+<td>the friction evidence</td>
+</tr>
+<tr>
+<td><strong>G10</strong></td>
+<td>The diary — strategy-summary quotes on the trajectory timeline</td>
+<td>Findings 1–2</td>
+<td>text-as-figure; pictorial-ready</td>
+</tr>
+</tbody>
+</table>
+<p><em>All source data is extracted or one query away (<code>analysis/merged_run.db</code> + the two source
+DBs for raw positions and daily learnings). G1's data is already pickled from this
+analysis session.</em></p>

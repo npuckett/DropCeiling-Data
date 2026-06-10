@@ -1,0 +1,213 @@
+<h1 id="drop-ceiling-candidate-references-acm-digital-library">Drop Ceiling — Candidate References (ACM Digital Library)</h1>
+<p><em>Verified against the ACM Digital Library full-text collection (<code>dl.acm.org</code>) on 2026-05-31.
+Each entry lists the venue, year, pages, and DOI exactly as shown in ACM's own catalogue.
+Grouped by the four areas requested. These are <strong>candidates</strong> — read abstracts before
+citing; relevance notes say why each is plausible for Drop Ceiling. ACADIA proceedings are
+indexed in CumInCAD, but these ACM sources are the requested verifiable anchors.</em></p>
+<blockquote>
+<p><strong>Framing note on &quot;AR&quot;.</strong> Drop Ceiling is light/illumination in physical space driven by
+camera tracking, with no headset and no screen-space overlay. The precise ACM term for
+this is <strong>Spatial Augmented Reality (SAR)</strong> / projection-based AR — digital response
+registered to real surfaces, viewable without worn devices. Framing the project as SAR
+(rather than HMD/optical-see-through AR) is both more accurate and better supported by
+the literature below. The fiducial-marker calibration that registers the cameras to the
+floor is itself a classic AR registration technique, which ties §1 and §3 together.</p>
+</blockquote>
+<hr />
+<h2 id="1-aruco-fiducial-markers-homography-amp-multi-camera-registration">1. ArUco / fiducial markers, homography &amp; multi-camera registration</h2>
+<p>The installation calibrates two camera feeds to a common floor plane using ArUco markers
+and homography/pose estimation, then fuses detections into one world coordinate frame.</p>
+<ol>
+<li>
+<p><strong>Artificial Markers: A Comprehensive Systematic Review and Design Framework.</strong>
+Benedito Ribeiro Neto, Bianchi Meiguins, Tiago Araújo, Carlos dos Santos.
+<em>ACM Computing Surveys (CSUR)</em> 58(9), Article 236, pp. 1–35, Feb 2026.
+https://doi.org/10.1145/3793661
+→ <em>The strongest single citation for the marker layer:</em> a current, peer-reviewed CSUR
+survey of fiducial markers (ArUco and beyond), pose-estimation accuracy, and a design
+framework. Use to justify the choice of ArUco for floor-plane registration.</p>
+</li>
+<li>
+<p><strong>Robust and Scalable Indoor Robot Localization Based on Fusion of Infrastructure
+Camera Feeds and On-Board Sensors.</strong> Poornima J D, Raghu Krishnapuram, Mukunda
+Bharatheesha, Bharadwaj Amrutur, Suresh Sundaram. <em>AIR '23: 6th Int'l Conf. on Advances
+in Robotics</em>, Article 41, pp. 1–7, Nov 2023. https://doi.org/10.1145/3610419.3610460
+→ Directly on point for <strong>fusing multiple fixed (infrastructure) camera feeds</strong> into a
+single pose estimate with spatially-varying uncertainty — the multi-camera fusion
+problem Drop Ceiling solves with its tracker.</p>
+</li>
+<li>
+<p><strong>MoiréBoard: A Stable, Accurate and Low-cost Camera Tracking Method.</strong>
+Chang Xiao, Changxi Zheng. <em>UIST '21: 34th ACM Symp. on User Interface Software and
+Technology</em>, pp. 881–893, Oct 2021. https://doi.org/10.1145/3472749.3474793
+→ Optional: low-cost camera tracking/registration in an HCI venue; useful if you discuss
+the accuracy/cost trade-offs that motivated a marker-based rather than beacon-based setup.</p>
+</li>
+<li>
+<p><strong>ArUcoTUI: Software Toolkit for Prototyping Tangible Interactions on Portable
+Flat-Panel Displays with OpenCV.</strong> Rong-Hao Liang, Steven Houben, Krithik Ranjan,
+S. Sandra Bae, Peter Gyory, Ellen Yi-Luen Do, Clement Zheng. <em>TEI '26</em>, Article 58,
+pp. 1–8, Mar 2026. https://doi.org/10.1145/3731459.3779317
+→ Optional/supporting: a recent ACM example of ArUco + OpenCV used as the interaction
+substrate, demonstrating the marker pipeline's standing as a current HCI tool.</p>
+</li>
+</ol>
+<hr />
+<h2 id="2-core-algorithms-amp-concepts-of-the-self-tuning-system">2. Core algorithms &amp; concepts of the self-tuning system</h2>
+<p>The autotuner is a budgeted online learner: a Thompson-sampling <strong>multi-armed bandit</strong>
+chooses expression strategies, a gradient/score-driven tuner adjusts personality
+parameters, all under an explicit exploration–exploitation trade-off and non-stationary
+(time-of-day) conditions.</p>
+<ol start="5">
+<li>
+<p><strong>A Tutorial on Multi-Armed Bandit Applications for Large Language Models.</strong>
+Djallel Bouneffouf, Raphaël Féraud. <em>KDD '24: 30th ACM SIGKDD Conf. on Knowledge
+Discovery and Data Mining</em>, pp. 6412–6413, Aug 2024.
+https://doi.org/10.1145/3637528.3671440
+→ A concise, citable ACM <strong>overview of MAB methods</strong> (incl. Thompson sampling) and the
+exploration/exploitation framing — good for grounding the bandit without a math detour.</p>
+</li>
+<li>
+<p><strong>What You Reward Is What You Learn: Comparing Rewards for Online Speech Policy
+Optimization in Public HRI.</strong> Sichao Song, Yuki Okafuji, Kaito Ariu, Amy Koike.
+<em>HRI '26: 21st ACM/IEEE Int'l Conf. on Human-Robot Interaction</em>, pp. 187–195, Mar 2026.
+https://doi.org/10.1145/3757279.3785589
+→ <em>Unusually close analogue:</em> <strong>online learning that adapts behaviour policy in a public
+space</strong>, explicitly contrasting &quot;fixed, hand-tuned parameters&quot; with online adaptation to
+&quot;non-stationary conditions&quot; — almost exactly Drop Ceiling's argument for self-tuning, and
+it discusses reward design (the engagement-score question).</p>
+</li>
+<li>
+<p><strong>Thompson Sampling with Unrestricted Delays.</strong> Han Wu, Stefan Wager.
+<em>EC '22: 23rd ACM Conf. on Economics and Computation</em>, pp. 937–955, Jul 2022.
+https://doi.org/10.1145/3490486.3538376
+→ Optional/technical: regret bounds for <strong>Thompson sampling under delayed feedback</strong> —
+relevant because engagement outcomes in the installation arrive with delay relative to
+the expression choice. Cite if you want a rigorous bandit anchor.</p>
+</li>
+<li>
+<p><strong>A Behavioral Model for Exploration vs. Exploitation: Theoretical Framework and
+Experimental Evidence.</strong> Jingying Ding, Yifan Feng, Ying Rong. <em>EC '25: 26th ACM Conf.
+on Economics and Computation</em>, p. 88, Jul 2025. https://doi.org/10.1145/3736252.3742497
+→ Optional: frames the <strong>exploration–exploitation trade-off</strong> itself (the conceptual
+core of curiosity vs. mean-reversion in the tuner) via the bandit lens.</p>
+</li>
+</ol>
+<hr />
+<h2 id="3-augmented-reality-framing-the-project-spatial-ar-projection-based">3. Augmented reality — framing the project (Spatial AR / projection-based)</h2>
+<p>For positioning Drop Ceiling as a <strong>spatial/projected AR</strong> work: digital response
+registered to physical space, experienced without worn devices.</p>
+<ol start="9">
+<li>
+<p><strong>DroneSAR: Extending Physical Spaces in Spatial Augmented Reality Using Projection on
+a Drone.</strong> Rajkumar Darbar, Joan Sol Roo, Thibault Lainé, [+1]. <em>MUM '19: 18th Int'l
+Conf. on Mobile and Ubiquitous Multimedia</em>, Article 4, pp. 1–7, Nov 2019.
+https://doi.org/10.1145/3365610.3365631
+→ Clean, citable <strong>definition and use of SAR</strong> (&quot;transforms real-world objects into
+interactive displays … without the need to wear any special [gear]&quot;) — ideal for the
+sentence where you define the project's AR category.</p>
+</li>
+<li>
+<p><strong>Diminishable Visual Markers on Fabricated Projection Object for Dynamic Spatial
+Augmented Reality.</strong> Hirotaka Asayama, Daisuke Iwai, Kosuke Sato. <em>SIGGRAPH Asia '15
+Emerging Technologies</em>, Article 7, pp. 1–2, Nov 2015.
+https://doi.org/10.1145/2818466.2818477
+→ Ties <strong>SAR + fiducial markers</strong> together in one reference — i.e. the same marker-based
+registration idea Drop Ceiling uses, framed explicitly within SAR.</p>
+</li>
+<li>
+<p><strong>FamiliAR Feedback: Investigating Feedback Modality and Familiarity in Classroom
+Settings Using Spatial Augmented Reality.</strong> Nick Wittig, Yannick Dohmen, Jonathan
+Liebers, [+3]. <em>MUM '25: 24th Int'l Conf. on Mobile and Ubiquitous Multimedia</em>,
+pp. 273–284, Nov 2025. https://doi.org/10.1145/3771882.3771883
+→ A current SAR study showing the term and method are live in the recent ACM literature;
+useful as a &quot;SAR remains an active research area&quot; citation.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>Foundational anchor to add (verify before citing):</strong> Bimber &amp; Raskar, <em>Spatial
+Augmented Reality: Merging Real and Virtual Worlds</em> (A K Peters, 2005) is the canonical
+SAR reference. It is a book, not ACM-hosted, so I did <strong>not</strong> verify it in DL; include it
+from the original if you want the field-defining citation alongside the ACM examples above.</p>
+</blockquote>
+<hr />
+<h2 id="4-adjacent-framing-interactive-light-in-public-space-media-architecture">4. Adjacent / framing — interactive light in public space, media architecture</h2>
+<p>Positions Drop Ceiling among permanent, camera-driven, public installations that respond
+to and learn from passers-by — the cultural/architectural framing for ACADIA's
+<em>Built Grounds</em> and <em>Machines that Care</em> subthemes.</p>
+<ol start="12">
+<li>
+<p><strong>Engaging Passers-by with Rhythm: Applying Feedforward Learning to a Xylophonic Media
+Architecture Facade.</strong> Binh Vinh Duc Nguyen, Jihae Han, [+3]. <em>CHI '23: 2023 CHI Conf.
+on Human Factors in Computing Systems</em>, Article 182, pp. 1–21, Apr 2023.
+https://doi.org/10.1145/3544548.3580761
+→ <em>The closest sibling project found:</em> a <strong>permanent media-architecture facade</strong> that
+engages <strong>passers-by</strong> and applies <strong>learning</strong> — directly comparable on permanence,
+public-space engagement, and adaptive behaviour. Strong related-work citation.</p>
+</li>
+<li>
+<p><strong>Towards Responsive Architecture that Mediates Place: Recommendations on How and When
+an Autonomously Moving Robotic Wall Should Adapt a Spatial Layout.</strong> Binh Vinh Duc
+Nguyen, Jihae Han, Andrew Vande Moere. <em>PACMHCI</em> 6(CSCW2), Article 467, pp. 1–27,
+Nov 2022. https://doi.org/10.1145/3555568
+→ On <strong>responsive architecture</strong> and <em>when</em> an autonomous system should adapt — speaks
+to Drop Ceiling's friction/restraint argument (acting deliberately, not constantly).</p>
+</li>
+<li>
+<p><strong>Using Embodied Audio-Visual Interaction to Promote Social Encounters Around Large
+Media Façades.</strong> Luke Hespanhol, Martin Tomitsch, Oliver Bown, [+1]. <em>DIS '14: 2014
+Conf. on Designing Interactive Systems</em>, pp. 945–954, Jun 2014.
+https://doi.org/10.1145/2598510.2598568
+→ A <strong>large-scale interactive light intervention in urban space</strong> addressing the
+addressivity/engagement challenges of public media — good for the active/passive zone
+and &quot;how do we invite engagement&quot; discussion.</p>
+</li>
+<li>
+<p><strong>Playing with the Spirit of a Place: Designing Urban Interactions with
+Hybrid-Resolution Media Facades.</strong> Peggy Liu, Luke Hespanhol. <em>MAB '20: 5th Media
+Architecture Biennale Conference</em>, pp. 31–41, Oct 2021.
+https://doi.org/10.1145/3469410.3469414
+→ Explicitly pairs <strong>&quot;responsive low-resolution LED lighting&quot;</strong> with high-res displays
+in urban play — supports the deliberately minimal 12-panel palette as a design stance,
+not a limitation.</p>
+</li>
+<li>
+<p><strong>The Dual Skins of a Media Façade: Explicit and Implicit Interactions.</strong>
+Claude Fortin, Kate Hennessy. <em>SIGGRAPH '15 Art Papers</em>, pp. 348–356, Jul 2015.
+https://doi.org/10.1145/2810177.2810181
+→ On <strong>implicit vs. explicit interaction</strong> at a Canadian (Montréal) media façade —
+relevant to Drop Ceiling's mostly-implicit interaction model (presence/flow, not
+deliberate input) and its Toronto site.</p>
+</li>
+</ol>
+<hr />
+<h2 id="quick-pick-shortlist-if-you-only-cite-6">Quick-pick shortlist (if you only cite ~6)</h2>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Markers / homography / fusion</td>
+<td><strong>#1 (CSUR marker survey)</strong> + <strong>#2 (multi-camera fusion)</strong></td>
+</tr>
+<tr>
+<td>Self-tuning algorithm</td>
+<td><strong>#6 (online policy adaptation in public HRI)</strong> + <strong>#5 (MAB overview)</strong></td>
+</tr>
+<tr>
+<td>AR framing</td>
+<td><strong>#9 (SAR definition)</strong> (+ Bimber &amp; Raskar book from origin)</td>
+</tr>
+<tr>
+<td>Public-space sibling work</td>
+<td><strong>#12 (learning media facade, CHI '23)</strong></td>
+</tr>
+</tbody>
+</table>
+<p><em>Notes: &quot;[+N]&quot; = additional authors truncated in ACM's list view; expand on the article
+page before final citation. All DOIs verified resolvable on dl.acm.org. Pages/years copied
+from ACM catalogue entries on 2026-05-31.</em></p>

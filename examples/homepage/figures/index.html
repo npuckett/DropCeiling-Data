@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Figure catalog — DropCeiling</title>
+  <meta name="description" content="All 58 rendered diagrams from the DropCeiling project, with search and series filter.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23fafaf8'/><circle cx='8' cy='8' r='3' fill='%23e8a23d'/></svg>">
+  <link rel="stylesheet" href="styles/main.css?v=20260610">
+</head>
+<body>
+  <a class="skip-link" href="#catalog">Skip to content</a>
+
+  <header class="mobile-header">
+    <a href="index.html" class="brand compact"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+    <button class="menu-button" type="button" aria-expanded="false">Menu</button>
+  </header>
+  <div class="backdrop"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <a href="index.html" class="brand"><span class="brand-title">Drop<span class="brand-light">Ceiling</span></span></a>
+      <p class="sidebar-summary">All 58 figures, filterable. Click any card to open the full SVG.</p>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="index.html#start">← Back to the main site</a>
+        <a href="index.html#story">Story</a>
+        <a href="index.html#findings-g">Findings · G</a>
+        <a href="index.html#findings-h">Findings · H</a>
+        <a href="index.html#architecture">Architecture</a>
+        <a href="#catalog">Figure catalog</a>
+        <a href="index.html#data">Data</a>
+        <a href="index.html#publications">Publications</a>
+        <a href="index.html#about">About</a>
+      </nav>
+      <div class="sidebar-actions">
+        <a href="https://thedropceiling.com" class="external-link">Live installation</a>
+        <a href="https://github.com/npuckett/dc-dev" class="external-link">Source code</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <section id="catalog" class="content-section">
+      <div class="section-heading">
+        <span class="eyebrow">Figures</span>
+        <h2>All 58 figures.</h2>
+        <p>Every rendered SVG across the A-, A7.x-, B-, C-, D-, E-, F-, G-, and H-series. Search by name or description, filter by series. Click any card to open the full SVG in a new tab.</p>
+      </div>
+      <div data-catalog>
+        <div class="filter-panel">
+          <label>Search <input type="text" data-catalog-search placeholder="e.g. funnel, brightness, aggression"></label>
+          <label>Series <select data-catalog-series><option value="">All</option><option>A</option><option>A7.x</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select></label>
+        </div>
+        <p class="catalog-status" data-catalog-status></p>
+        <div class="figure-grid" data-catalog-grid></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="scripts/filter.js?v=20260610"></script>
+  <script src="scripts/nav.js?v=20260610"></script>
+</body>
+</html>
