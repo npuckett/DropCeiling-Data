@@ -16,7 +16,7 @@ node; <strong>C</strong> = how all of that <em>collapses to 12 light values</em>
 </blockquote>
 <p><strong>◧ Diagram P3 — the project's own system diagram</strong> (an earlier, project-made overview;
 the A-series figures in this guide are the cleaned, verified reconstruction of it):</p>
-<p><img src="../assets/photos/P3_original_system_diagram.png" alt="P3 — The original Drop Ceiling system diagram: camera+YOLO → person manager → behavior system → autotuning/feedback/daily-learning → wander box → point light → panel system → Art-Net, with the web viewer branch" /></p>
+<p><img src="assets/photos/P3_original_system_diagram.png" alt="P3 — The original Drop Ceiling system diagram: camera+YOLO → person manager → behavior system → autotuning/feedback/daily-learning → wander box → point light → panel system → Art-Net, with the web viewer branch" /></p>
 <hr />
 <h2 id="1-the-whole-system-in-one-picture">1. The whole system in one picture</h2>
 <p>Drop Ceiling turns a sidewalk into an instrument. Two cameras watch pedestrians; a
@@ -27,12 +27,12 @@ its own personality over days — with an <em>interaction budget</em> providing 
 keeps that self-adaptation deliberate rather than twitchy.</p>
 <p><strong>◧ Photo P1 — the installation in situ</strong> (Haworth Canada showroom window, 55 University
 Ave, Toronto; twelve panels in four sandwich-board units, seen from the sidewalk at night):</p>
-<p><img src="../assets/photos/P1_installation_photo.jpg" alt="P1 — Drop Ceiling installed in the Haworth showroom window at night: four illuminated free-standing units of three panels each, viewed from the sidewalk between the building's columns" /></p>
+<p><img src="assets/photos/P1_installation_photo.jpg" alt="P1 — Drop Ceiling installed in the Haworth showroom window at night: four illuminated free-standing units of three panels each, viewed from the sidewalk between the building's columns" /></p>
 <p><strong>◧ Render P2 — the four units / panel geometry</strong> (each unit = 3 panels, numbered 1/2/3;
 the layout the whole spatial model is built on, §15d):</p>
-<p><img src="../assets/photos/P2_unit_geometry.png" alt="P2 — 3D render of the four Drop Ceiling units, each a sandwich-board of three numbered panels (1 upper, 2 and 3 angled), matching world_coordinates.json" /></p>
+<p><img src="assets/photos/P2_unit_geometry.png" alt="P2 — 3D render of the four Drop Ceiling units, each a sandwich-board of three numbered panels (1 upper, 2 and 3 angled), matching world_coordinates.json" /></p>
 <p><strong>◧ Figure A1 — Top-level pipeline (left-to-right signal flow):</strong></p>
-<p><img src="../assets/diagrams/A1_pipeline.svg" alt="A1 — Top-level pipeline: tracker → controller → panels, with WebSocket viewer, SQLite DB, and the 3×/day meta-tuner loop" /></p>
+<p><img src="assets/diagrams/A1_pipeline.svg" alt="A1 — Top-level pipeline: tracker → controller → panels, with WebSocket viewer, SQLite DB, and the 3×/day meta-tuner loop" /></p>
 <p>Three OS processes (each a <code>systemd</code> service): <strong>tracker</strong>, <strong>controller</strong>,
 <strong>meta-tuner</strong>. Everything they share passes through two channels — <strong>OSC</strong> (live
 positions) and the <strong>SQLite database</strong> (memory).</p>
@@ -41,7 +41,7 @@ positions) and the <strong>SQLite database</strong> (memory).</p>
 <p>This is the single most important diagram for the submission — it shows the project is
 about <em>time and adaptation</em>, not just reactivity.</p>
 <p><strong>◧ Figure A2 — Three concentric loops, fastest innermost:</strong></p>
-<p><img src="../assets/diagrams/A2_nested_loops.svg" alt="A2 — Three nested control loops: reaction (~33 ms) inside anticipation (sec–hours) inside self-tuning (hours–days)" /></p>
+<p><img src="assets/diagrams/A2_nested_loops.svg" alt="A2 — Three nested control loops: reaction (~33 ms) inside anticipation (sec–hours) inside self-tuning (hours–days)" /></p>
 <table>
 <thead>
 <tr>
@@ -208,7 +208,7 @@ character, far from the 0.5 neutral start. <em>(Good caption for a &quot;before/
 </table>
 <h3 id="3c-how-a-meta-parameter-becomes-light-the-modulation-chain">3c. How a meta-parameter becomes light (the modulation chain)</h3>
 <p><strong>◧ Figure A4 — a horizontal &quot;signal chain&quot; / pipeline of multiply stages:</strong></p>
-<p><img src="../assets/diagrams/A4_modulation_chain.svg" alt="A4 — Modulation chain: mode base value × personality × time-of-day × proximity → interpolate → light" /></p>
+<p><img src="assets/diagrams/A4_modulation_chain.svg" alt="A4 — Modulation chain: mode base value × personality × time-of-day × proximity → interpolate → light" /></p>
 <pre><code> MODE base value  ×  META-PARAM  ×  TIME-OF-DAY  ×  PROXIMITY  →  interp →  LIGHT
  e.g. pulse 2500 ms  × energy 0.77→0.86  × evening ×1.3  × near  →  ~2800 ms
  e.g. brightness 8–30  × brightness_global  × ×0.6 late-night  × near ×1.4  →  final DMX
@@ -245,7 +245,7 @@ complexity expressed through a deliberately minimal palette.</p>
 <p><strong>◧ Figure C1 — the hero funnel:</strong> a wide top band of all subsystems narrowing through a
 single waist labelled <em>PointLight (≈9 values)</em> and fanning back out to a row of 12 panel
 cells → Art-Net.</p>
-<p><img src="../assets/diagrams/C1_funnel_to_12.svg" alt="C1 — The funnel: the whole adaptive system collapses to the PointLight state, then fans back out to 12 DMX panel values" /></p>
+<p><img src="assets/diagrams/C1_funnel_to_12.svg" alt="C1 — The funnel: the whole adaptive system collapses to the PointLight state, then fans back out to 12 DMX panel values" /></p>
 <h3 id="3e-the-pinch-point-who-writes-each-light-value-c2">3e. The pinch point — who writes each light value (C2)</h3>
 <p>Prose: the nine scalars look trivial, but each is the <em>sum of the whole system pressing
 on one number.</em> This is the figure that connects §3c's modulation chain to a concrete
@@ -297,7 +297,7 @@ the anisotropic shape (scale + rotation) lets a gesture stretch or steer the bea
 the panel field. (<code>PanelSystem.calculate_brightness</code>,
 <a href="lightController_osc.py">lightController_osc.py:2299</a>.)</p>
 <p><strong>◧ Figure C3 — the per-panel pipeline (runs ×12 every frame):</strong></p>
-<p><img src="../assets/diagrams/C3_per_panel_math.svg" alt="C3 — Per-panel math: displacement → rotate → anisotropic scale → distance → linear falloff → × intensity → clamp to one DMX byte" /></p>
+<p><img src="assets/diagrams/C3_per_panel_math.svg" alt="C3 — Per-panel math: displacement → rotate → anisotropic scale → distance → linear falloff → × intensity → clamp to one DMX byte" /></p>
 <p><strong>◧ DRAW — C4, the wiring map:</strong> 4 units × 3 panels → DMX channels 0–11 → 512-byte frame
 (only 12 bytes used) → <code>set_single_value</code> → Art-Net <code>:6454</code> universe 0, target
 <code>10.42.0.200</code> @ 30 fps. <em>(Rendered: <code>diagrams/C4_panel_dmx_map</code>.)</em></p>
@@ -319,7 +319,7 @@ live active/passive counts, with <strong>stickiness</strong> (conditions must pe
 <strong>8 s minimum dwell</strong> preventing flicker.</p>
 <p><strong>◧ Figure A3 — a state machine. Nodes = modes; edges = transitions labelled with the
 trigger and the transition duration. Engage-edges are fast, disengage-edges slow.</strong></p>
-<p><img src="../assets/diagrams/A3_mode_state_machine.svg" alt="A3 — Behaviour mode state machine: IDLE / FLOW / AWARE / ENGAGED / CROWD with persistence and transition timings" /></p>
+<p><img src="assets/diagrams/A3_mode_state_machine.svg" alt="A3 — Behaviour mode state machine: IDLE / FLOW / AWARE / ENGAGED / CROWD with persistence and transition timings" /></p>
 <table>
 <thead>
 <tr>
@@ -366,7 +366,7 @@ sway, orbit, settle, breathe, bloom, sweep, focus…).</p>
 <em>forecasts</em> the next minute-to-hour from the database and pre-positions/energises
 itself, so it is already &quot;leaning toward&quot; arriving traffic.</p>
 <p><strong>◧ Figure A5 — nested time windows feeding three influence signals:</strong></p>
-<p><img src="../assets/diagrams/A5_trend_windows.svg" alt="A5 — Trend windows (1/5/30/60 min) folded into activity_anticipation, flow_momentum, energy_level, weighted by idle_trend_weight" /></p>
+<p><img src="assets/diagrams/A5_trend_windows.svg" alt="A5 — Trend windows (1/5/30/60 min) folded into activity_anticipation, flow_momentum, energy_level, weighted by idle_trend_weight" /></p>
 <p>Plus two faster sub-systems:</p>
 <ul>
 <li><strong>Flow tracker</strong> (<code>FlowState</code>, <a href="light_behavior.py">light_behavior.py:170</a>) —
@@ -381,7 +381,7 @@ at night, peak at lunch).</li>
 <p><strong>◧ Figure A6 — aggression as a tank</strong>: inflow = &quot;ignored time + passers-by who don't
 stop&quot;, outflow = &quot;engagement&quot;, with a ceiling valve labelled &quot;time-of-day cap (hourly
 curve).&quot;</p>
-<p><img src="../assets/diagrams/A6_aggression_tank.svg" alt="A6 — Aggression modelled as a tank: filled by being ignored, drained by engagement, capped by an hourly time-of-day ceiling" /></p>
+<p><img src="assets/diagrams/A6_aggression_tank.svg" alt="A6 — Aggression modelled as a tank: filled by being ignored, drained by engagement, capped by an hourly time-of-day ceiling" /></p>
 <hr />
 <h2 id="6-self-tuning-loop-the-interaction-budget-timescale-hours-days">6. Self-tuning loop + the interaction budget (timescale: hours → days)</h2>
 <p>This is the conceptual heart and the best candidate for a feedback-loop diagram.</p>
@@ -401,11 +401,11 @@ light from chasing noisy, second-to-second signals — it can make a few meaning
 then must &quot;earn back&quot; the right to keep changing.
 (<code>SmartAutoTuner</code>, <a href="V6Dev/smart_autotuner.py">V6Dev/smart_autotuner.py:607</a>.)</p>
 <p><strong>◧ Figure A8 — the budget mechanism:</strong></p>
-<p><img src="../assets/diagrams/A8_budget_mechanism.svg" alt="A8 — Interaction budget: spend = Σ|Δ| × cost_scale depletes it, refill = max / restore_seconds replenishes it; over-budget changes are throttled" /></p>
+<p><img src="assets/diagrams/A8_budget_mechanism.svg" alt="A8 — Interaction budget: spend = Σ|Δ| × cost_scale depletes it, refill = max / restore_seconds replenishes it; over-budget changes are throttled" /></p>
 <h3 id="6c-the-full-self-tuning-feedback-diagram">6c. The full self-tuning feedback diagram</h3>
 <p><strong>◧ Figure A7 — closed loop. The clever bit: the budget is itself re-tuned by the
 review.</strong> Each node is expanded in §6c-i (A7.1–A7.7).</p>
-<p><img src="../assets/diagrams/A7_self_tuning_feedback.svg" alt="A7 — Self-tuning feedback loop: PUSH (live signal) into the tuner, RESIST (budget + reversion + caps), logged to the DB, re-governed by the 3×/day meta-review" /></p>
+<p><img src="assets/diagrams/A7_self_tuning_feedback.svg" alt="A7 — Self-tuning feedback loop: PUSH (live signal) into the tuner, RESIST (budget + reversion + caps), logged to the DB, re-governed by the 3×/day meta-review" /></p>
 <p><strong>Three forces to label in the figure:</strong> <strong>PUSH</strong> (live signal wants change),
 <strong>RESIST</strong> (budget + mean-reversion toward &quot;home&quot; + hard caps), and <strong>META</strong> (the
 3×/day review adjusts how hard each side pushes). Balance of the three = &quot;alive but not
@@ -475,7 +475,7 @@ of a single trip around the loop.</p>
 <p><strong>◧ Figure A7.3b — worked friction example, the figure that <em>shows</em> the friction rather
 than naming it.</strong> Trace one proposed <code>energy</code> change through the stack (constants are the
 V6.5c defaults; the +0.050 input and budget levels are illustrative):</p>
-<p><img src="../assets/diagrams/A7_3b_resist_worked_example.svg" alt="A7.3b — A proposed +0.050 nudge to energy whittled through mean-reversion, step clamp, budget, and value clamp to ~0.012 (or ~0.006 when throttled)" /></p>
+<p><img src="assets/diagrams/A7_3b_resist_worked_example.svg" alt="A7.3b — A proposed +0.050 nudge to energy whittled through mean-reversion, step clamp, budget, and value clamp to ~0.012 (or ~0.006 when throttled)" /></p>
 <table>
 <thead>
 <tr>
@@ -565,7 +565,7 @@ masters at once: <strong>live behaviour</strong>, <strong>trend analysis</strong
 years while keeping permanent history.</p>
 <p><strong>◧ Figure B1 — a tiered/funnel diagram: raw (48h) → hourly (∞) → daily (∞), with side
 tables for the light's own behaviour and its tuning audit.</strong></p>
-<p><img src="../assets/diagrams/B1_db_funnel.svg" alt="B1 — Tiered database: raw tracking_events / light_behavior / behavior_adjustments (48 h) roll up to hourly_stats and daily_stats_v2 / learnings / reviews kept forever" /></p>
+<p><img src="assets/diagrams/B1_db_funnel.svg" alt="B1 — Tiered database: raw tracking_events / light_behavior / behavior_adjustments (48 h) roll up to hourly_stats and daily_stats_v2 / learnings / reviews kept forever" /></p>
 <table>
 <thead>
 <tr>
@@ -631,11 +631,11 @@ tables for the light's own behaviour and its tuning audit.</strong></p>
 <hr />
 <h2 id="9-real-time-ingestion-the-sensing-front-end">9. Real-time ingestion (the sensing front-end)</h2>
 <p><strong>◧ Figure A10 — camera → YOLO → floor projection → fusion → OSC → controller.</strong></p>
-<p><img src="../assets/diagrams/A10_ingestion.svg" alt="A10 — Real-time ingestion: 2 RTSP cameras → batched YOLO → ArUco floor projection → fusion → OSC :7000 → controller zone-classify + DB write → Art-Net" /></p>
+<p><img src="assets/diagrams/A10_ingestion.svg" alt="A10 — Real-time ingestion: 2 RTSP cameras → batched YOLO → ArUco floor projection → fusion → OSC :7000 → controller zone-classify + DB write → Art-Net" /></p>
 <p>The camera-to-floor mapping is solved from printed <strong>ArUco fiducial markers</strong> placed at
 known positions in the space (P6); detecting them gives the homography/pose that turns
 pixel coordinates into real-world floor positions.</p>
-<p><img src="../assets/photos/P6_aruco_marker.png" alt="P6 — An ArUco fiducial marker from the calibration set, used to register camera pixels to real-world floor coordinates" /></p>
+<p><img src="assets/photos/P6_aruco_marker.png" alt="P6 — An ArUco fiducial marker from the calibration set, used to register camera pixels to real-world floor coordinates" /></p>
 <p>A single pedestrian step becomes, within ~40 ms: a light reaction, a DB row, and a
 WebSocket frame. Light output leaves over <strong>Art-Net/UDP :6454</strong> as per-panel DMX from a
 distance-falloff model.</p>
@@ -643,7 +643,7 @@ distance-falloff model.</p>
 the storefront; <strong>active zone</strong> (engaging) close in; <strong>passive zone</strong> (sidewalk traffic)
 beyond it; two cameras angled inward; ArUco markers. Coordinates in cm, X along the
 panels, Z out toward the street.</p>
-<p><img src="../assets/diagrams/B3_spatial_plan.svg" alt="B3 — Installation plan to scale (cm): 4 panel units, two inward-angled cameras, ArUco markers, and the active/passive tracking zones" /></p>
+<p><img src="assets/diagrams/B3_spatial_plan.svg" alt="B3 — Installation plan to scale (cm): 4 panel units, two inward-angled cameras, ArUco markers, and the active/passive tracking zones" /></p>
 <p><em>(B3 is pinned to real centimetre coordinates, so the subway-wall marker sits far up-frame;
 treat it as a scale reference and redraw with filled zone rectangles for the final poster.)</em></p>
 <hr />
@@ -653,7 +653,7 @@ happened <em>over time</em>.&quot; Live state streams over WebSocket; long-term 
 pre-computed server-side and published as static JSON — the browser never touches the
 database or does heavy maths.</p>
 <p><strong>◧ Figure A11 — two parallel pipes from controller to browser:</strong></p>
-<p><img src="../assets/diagrams/A11_web_two_planes.svg" alt="A11 — Two web planes: an immediate WebSocket stream (~15 fps live state) and a nightly static-JSON trends plane published to GitHub Pages" /></p>
+<p><img src="assets/diagrams/A11_web_two_planes.svg" alt="A11 — Two web planes: an immediate WebSocket stream (~15 fps live state) and a nightly static-JSON trends plane published to GitHub Pages" /></p>
 <table>
 <thead>
 <tr>
@@ -1235,10 +1235,10 @@ evaluations&quot; = the deep 8-hour database reviews. Numbers are deliberately c
 state them as approximate (&quot;~&quot;, &quot;roughly&quot;) in the submission.</em></p>
 <p><strong>◧ Figure D1 — run totals over 54 days</strong> (the same table as a log-scale ladder; good as a
 single &quot;scale&quot; slide):</p>
-<p><img src="../assets/diagrams/D1_run_totals.svg" alt="D1 — Estimated Drop Ceiling run totals over 54 days: ~15M tracking events, ~3.1M flow updates, ~1M visitors, ~580K short-term evaluations, 162 meta-reviews, 54 daily-learning cycles" /></p>
+<p><img src="assets/diagrams/D1_run_totals.svg" alt="D1 — Estimated Drop Ceiling run totals over 54 days: ~15M tracking events, ~3.1M flow updates, ~1M visitors, ~580K short-term evaluations, 162 meta-reviews, 54 daily-learning cycles" /></p>
 <p><strong>◧ Figure D2 — fast vs slow</strong> (the friction argument as a picture: tens of thousands of
 fast adjustments a day, governed by a handful of slow reviews):</p>
-<p><img src="../assets/diagrams/D2_eval_cadence.svg" alt="D2 — Evaluations per day on a log scale: flow updates ~57,600 and short-term evals ~10,800 (fast) versus 3 meta-reviews and 1 daily-learning cycle (slow)" /></p>
+<p><img src="assets/diagrams/D2_eval_cadence.svg" alt="D2 — Evaluations per day on a log scale: flow updates ~57,600 and short-term evals ~10,800 (fast) versus 3 meta-reviews and 1 daily-learning cycle (slow)" /></p>
 <p><em>(Both rendered by <code>diagrams/src/D_scale_charts.py</code> via matplotlib; re-run to update if the
 final database yields hard totals.)</em></p>
 <p>Why the scale matters, concretely:</p>
@@ -1449,7 +1449,7 @@ scale in cm),</li>
 afterward — it <em>is</em> the program. You can watch the light think in the same 3D space the
 panels live in. It is also why the C-series collapse is legible: the OpenGL scene and the
 Art-Net output read the <em>same</em> <code>PointLight</code> state (§3d–§3f, C2).</p>
-<p><img src="../assets/photos/P4_pygame_3d_twin.png" alt="P4 — The pygame + OpenGL control runtime (&quot;3D Light Controller V6.5&quot;): the panel units, the glowing virtual point light with its falloff wireframe, tracking zones, and live parameter sliders, all in one 3D scene" />
+<p><img src="assets/photos/P4_pygame_3d_twin.png" alt="P4 — The pygame + OpenGL control runtime (&quot;3D Light Controller V6.5&quot;): the panel units, the glowing virtual point light with its falloff wireframe, tracking zones, and live parameter sliders, all in one 3D scene" />
 <em>Photo P4 — the control software as a 3D game: physical layout, the virtual light, and the
 live control parameters share one runtime and one coordinate frame.</em></p>
 <p><strong>Piece 2 — a lightweight 3D modeller that generates model context (<code>spatial-editor/</code>).</strong>
@@ -1471,7 +1471,7 @@ from a 3D model to a language model's working context.</li>
 <code>IO/world_coordinates.json</code> into the editor and back, validating the schema against the
 real installation.</li>
 </ul>
-<p><img src="../assets/photos/P5_agent_authoring_session.png" alt="P5 — A development session: the 3D controller scene (left) beside an AI coding-agent conversation (right), the agent writing capture/control logic against the spatial model" />
+<p><img src="assets/photos/P5_agent_authoring_session.png" alt="P5 — A development session: the 3D controller scene (left) beside an AI coding-agent conversation (right), the agent writing capture/control logic against the spatial model" />
 <em>Photo P5 — the human–AI authoring method in practice: the spatial runtime and the coding
 agent side by side, the model reasoning over the shared geometry. (Crop/clean before
 publishing — this is a working desktop capture, not a finished figure.)</em></p>
@@ -1995,7 +1995,7 @@ identical schemas), each covering a different stretch:</p>
 (<code>analysis/merged_run.db</code>), de-duplicated, with every row tagged by source. The early copy
 fills exactly the window the late copy was missing.</p>
 <h3 id="18c-the-software-data-timeline-figure-f1">18c. The software/data timeline (Figure F1)</h3>
-<p><img src="../assets/diagrams/F1_software_data_timeline.svg" alt="Figure F1 — two-lane timeline: daily tracking events (measured, partial, estimated, and report-recovered days) above the software-version milestones (V2 to V6.5c, the Feb 12 DB fix, and AWARE mode entering the data on Mar 15), on one shared date axis" />
+<p><img src="assets/diagrams/F1_software_data_timeline.svg" alt="Figure F1 — two-lane timeline: daily tracking events (measured, partial, estimated, and report-recovered days) above the software-version milestones (V2 to V6.5c, the Feb 12 DB fix, and AWARE mode entering the data on Mar 15), on one shared date axis" />
 <em>Figure F1 — capture volume and quality (top) aligned to the software versions (bottom):
 what the database recorded tracked what the software could do.</em></p>
 <p>The data records the software's evolution; cross-checked against git commit dates:</p>
@@ -2083,7 +2083,7 @@ gestures&quot; describes the <strong>final</strong> system, not the whole run.</
 <p>A 97% active rate is physically impossible for this site (the alcove is a minority
 destination off a busy sidewalk). Those five days' <strong>active/passive labels are invalid</strong> —
 people were detected, but mis-zoned.</p>
-<p><img src="../assets/diagrams/F2_calibration_artifact.svg" alt="Figure F2 — active-zone share of detections across the run: a red ~95-98% plateau before Feb 12 (offset uncorrected, physically impossible) collapsing to a realistic ~1-12% band after the calibration fix, with re-estimated (warm) and measured (black) points" />
+<p><img src="assets/diagrams/F2_calibration_artifact.svg" alt="Figure F2 — active-zone share of detections across the run: a red ~95-98% plateau before Feb 12 (offset uncorrected, physically impossible) collapsing to a realistic ~1-12% band after the calibration fix, with re-estimated (warm) and measured (black) points" />
 <em>Figure F2 — the artifact made visible: the impossible early &quot;active&quot; spike and its
 correction.</em> The split was <strong>re-estimated</strong> (clearly flagged) by
 matching each early hour to the measured active share of the <strong>same weekday + hour</strong> in the
@@ -2099,7 +2099,7 @@ every one of those days. The reports are a frozen snapshot of data the database 
 holds — the <strong>tiered-retention design</strong> (raw → hourly aggregate → daily report) doing
 exactly what it was meant to. Those 7 days were ingested back in (168 hours, <strong>~3.0 M
 events</strong>, tagged <code>src='report'</code>), giving <strong>continuous coverage with no gaps</strong>:</p>
-<p><img src="../assets/diagrams/F3_report_recovery.svg" alt="Figure F3 — tiered retention recovered the lost week: raw events (48h) roll up to hourly_stats (in DB) and a nightly daily-report JSON (on disk); Feb 3-9 were pruned from the DB but survived in the reports and were re-ingested into a continuous run" />
+<p><img src="assets/diagrams/F3_report_recovery.svg" alt="Figure F3 — tiered retention recovered the lost week: raw events (48h) roll up to hourly_stats (in DB) and a nightly daily-report JSON (on disk); Feb 3-9 were pruned from the DB but survived in the reports and were re-ingested into a continuous run" />
 <em>Figure F3 — how the lost week was recovered: the daily reports outlived the raw data they
 were derived from.</em></p>
 <table>

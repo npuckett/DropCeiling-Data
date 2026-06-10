@@ -302,8 +302,8 @@
     if (window.DC_loadData) {
       var dataBase = (function () {
         // Resolve web_data URL relative to the current page.
-        // /examples/homepage/index.html -> ../../web_data/
-        return "../../web_data/";
+        // /examples/homepage/index.html -> ../../  (web_data/ lives at repo root)
+        return "../../";
       })();
       window.DC_loadData(dataBase).then(function (D) {
         // Summary cards

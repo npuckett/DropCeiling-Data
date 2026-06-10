@@ -25,7 +25,11 @@ def slugify(s):
     return s
 
 def find_figure_path(fig_id):
-    """Return the relative SVG path for a figure id like 'G1' or 'A7.3b'."""
+    """Return the SVG path for a figure id like 'G1' or 'A7.3b'.
+    Path is homepage-relative (assets/diagrams/...) because these
+    fragments are fetched via JS and injected into index.html — relative
+    URLs in injected HTML resolve against the host page, not the source
+    file."""
     diagrams_dir = os.path.join(HERE, "assets", "diagrams")
     if not os.path.isdir(diagrams_dir):
         return None
@@ -152,22 +156,20 @@ def rewrite_legacy_paths(html):
         stem = m.group(1)
         svg_path = os.path.join(HERE, "assets", "diagrams", stem + ".svg")
         if os.path.exists(svg_path):
-            return "../assets/diagrams/" + stem + ".svg"
+            return "assets/diagrams/" + stem + ".svg"
         return p
 
-    # diagrams/assets/P*.{jpg,png} -> ../assets/photos/P*.{jpg,png}
+    # diagrams/assets/P*.{jpg,png} -> assets/photos/P*.{jpg,png}
     html = re.sub(r'(?:src|href)="diagrams/assets/([^"]+)"',
-                  lambda m: m.group(0).replace("diagrams/assets/", "../assets/photos/"),
+                  lambda m: m.group(0).replace("diagrams/assets/", "assets/photos/"),
                   html)
-    # diagrams/png/A*.png -> ../assets/diagrams/A*.svg (if svg exists)
-    # NOTE: keep the src=/href= prefix from the original match — the inner
-    # png_to_svg() only rewrites the path itself.
+    # diagrams/png/A*.png -> assets/diagrams/A*.svg (if svg exists)
     html = re.sub(r'((?:src|href))="diagrams/png/([^"]+)"',
                   lambda m: m.group(1) + '="' + png_to_svg("diagrams/png/" + m.group(2)) + '"',
                   html)
-    # diagrams/*.svg -> ../assets/diagrams/*.svg
+    # diagrams/*.svg -> assets/diagrams/*.svg
     html = re.sub(r'(?:src|href)="diagrams/([^"]+\.svg)"',
-                  lambda m: m.group(0).replace("diagrams/", "../assets/diagrams/"),
+                  lambda m: m.group(0).replace("diagrams/", "assets/diagrams/"),
                   html)
     return html
 
