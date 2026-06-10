@@ -85,8 +85,12 @@
     var statusSel = catalogSel.querySelector("[data-catalog-status]");
     // Optional data-catalog-base="../../assets/diagrams/" lets a sub-page
     // override the prefix; default is "assets/diagrams/" (works from the
-    // homepage root).
-    var basePrefix = catalogSel.getAttribute("data-catalog-base") || "assets/diagrams/";
+    // homepage root). Use the pre-rendered PNG thumbnails for the catalog
+    // cards (cleaner text rendering, no foreignObject issues) — they live
+    // alongside the SVGs in assets/diagrams_thumb/.
+    var svgPrefix = catalogSel.getAttribute("data-catalog-base") || "assets/diagrams/";
+    var thumbPrefix = svgPrefix.replace(/\/diagrams\/$/, "/diagrams_thumb/");
+    var useThumbs = catalogSel.getAttribute("data-catalog-thumb") !== "false";
 
     // Render all cards
     function render(filter) {
@@ -98,9 +102,16 @@
         var id = entry[0], series = entry[1], title = entry[2], desc = entry[3], thumb = entry[4];
         var card = document.createElement("article");
         card.className = "figure-card";
-        var thumbPath = basePrefix + thumb.replace(/^.*\//, "");
+        var baseName = thumb.replace(/^.*\//, "").replace(/\.svg$/, "");
+        var thumbImg = useThumbs
+          ? thumbPrefix + baseName + ".png"
+          : (svgPrefix + baseName + ".svg");
+        // The link to the full SVG (for "view in catalog" / "open in new tab" behavior)
+        var fullLink = svgPrefix + baseName + ".svg";
         card.innerHTML =
-          '<div class="figure-thumb"><img src="' + thumbPath + '" alt="' + id + ' — ' + title + '" loading="lazy"></div>' +
+          '<a class="figure-thumb" href="' + fullLink + '" target="_blank" rel="noopener" title="Open ' + id + ' at full size">' +
+          '<img src="' + thumbImg + '" alt="' + id + ' — ' + title + '" loading="lazy">' +
+          '</a>' +
           '<span class="figure-id">' + id + ' · ' + series + '</span>' +
           '<h4>' + title + '</h4>' +
           '<p>' + desc + '</p>';

@@ -195,8 +195,9 @@ h4 { font-size: 1.1rem; margin: 22px 0 8px; }
 }
 .figure-card .figure-id { color: var(--accent-warm-dark); font-weight: 800; font-size: 0.82rem; letter-spacing: 0.04em; }
 .figure-card h4 { margin: 0; font-size: 1rem; }
-.figure-card .figure-thumb { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px; display: flex; justify-content: center; align-items: center; min-height: 100px; }
-.figure-card .figure-thumb img { max-height: 100px; width: auto; }
+.figure-card .figure-thumb { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 6px; display: flex; justify-content: center; align-items: center; min-height: 130px; max-height: 180px; overflow: hidden; }
+.figure-card .figure-thumb img { max-height: 160px; max-width: 100%; width: auto; height: auto; }
+.figure-card .figure-thumb { text-decoration: none; }
 .figure-card p { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
 /* Big figure (for finding sections) */
